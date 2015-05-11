@@ -30,15 +30,24 @@ module.exports = (grunt) ->
 				src: ["**/*.coffee"]
 				dest: "test/acceptance/js/"
 				ext:  ".js"
+
+		watch:
+			coffee:
+				files: [ 'app.coffee', 'app/coffee/*.coffee' ]
+				tasks: [ 'run' ]
+				options:
+					atBegin: true
+
 		clean:
 			app: ["app/js/"]
 			unit_tests: ["test/unit/js"]
 			acceptance_tests: ["test/acceptance/js"]
 			smoke_tests: ["test/smoke/js"]
 
-		execute:
-			app:
-				src: "app.js"
+		express:
+			options:
+				script: 'app.js'
+				delay: 1000
 
 		mochaTest:
 			unit:
@@ -55,14 +64,16 @@ module.exports = (grunt) ->
 
 	grunt.loadNpmTasks 'grunt-contrib-coffee'
 	grunt.loadNpmTasks 'grunt-contrib-clean'
+	grunt.loadNpmTasks 'grunt-contrib-watch'
 	grunt.loadNpmTasks 'grunt-mocha-test'
 	grunt.loadNpmTasks 'grunt-shell'
-	grunt.loadNpmTasks 'grunt-execute'
+	grunt.loadNpmTasks 'grunt-express-server'
+
 	grunt.loadNpmTasks 'grunt-bunyan'
 	grunt.loadNpmTasks 'grunt-forever'
 
 	grunt.registerTask 'compile:app', ['clean:app', 'coffee:app', 'coffee:app_src']
-	grunt.registerTask 'run',         ['compile:app', 'bunyan', 'execute']
+	grunt.registerTask 'run',         ['compile:app', 'bunyan', 'express']
 
 	grunt.registerTask 'compile:unit_tests', ['clean:unit_tests', 'coffee:unit_tests']
 	grunt.registerTask 'test:unit',          ['compile:app', 'compile:unit_tests', 'mochaTest:unit']
