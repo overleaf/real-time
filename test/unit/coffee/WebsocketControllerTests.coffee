@@ -370,7 +370,7 @@ describe 'WebsocketController', ->
 
 	describe "applyOtUpdate", ->
 		beforeEach ->
-			@update = {op: {p: 12, t: "foo"}}
+			@update = {op: [{p: 12, t: "foo"}]}
 			@client.params.user_id = @user_id
 			@client.params.project_id = @project_id
 			@AuthorizationManager.assertClientCanEditProject = sinon.stub().callsArg(1)
@@ -434,4 +434,17 @@ describe 'WebsocketController', ->
 
 			it "should call the callback with the error", ->
 				@callback.calledWith(@error).should.equal true
+
+		describe "with UTF-16 surrogate pairs in the update", ->
+			beforeEach ->
+				@update = {op: [{p: 12, i: "foo"}, {p: 42, i: "\uD835\uDC00"}]}
+				@WebsocketController.applyOtUpdate @client, @doc_id, @update, @callback
+
+			it "should queue the update but with surrogate pairs removed", ->
+				@DocumentUpdaterManager.queueChange
+					.calledWith(@project_id, @doc_id, @update)
+					.should.equal true
+				
+				# \uFFFD is 'replacement character'
+				@update.op[1].i.should.equal "\uFFFD\uFFFD"
 			
