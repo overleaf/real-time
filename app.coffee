@@ -1,10 +1,15 @@
+Metrics = require("metrics-sharelatex")
+Settings = require "settings-sharelatex"
+Metrics.initialize(Settings.appName or "real-time")
+async = require("async")
+
 logger = require "logger-sharelatex"
-logger.initialize("real-time-sharelatex")
+logger.initialize("real-time")
+Metrics.event_loop.monitor(logger)
 
 express = require("express")
 session = require("express-session")
 redis = require("redis-sharelatex")
-Settings = require "settings-sharelatex"
 if Settings.sentry?.dsn?
 	logger.initializeErrorReporting(Settings.sentry.dsn)
 
@@ -14,19 +19,18 @@ RedisStore = require('connect-redis')(session)
 SessionSockets = require('session.socket.io')
 CookieParser = require("cookie-parser")
 
-Metrics = require("metrics-sharelatex")
-Metrics.initialize(Settings.appName or "real-time")
-Metrics.event_loop.monitor(logger)
-
+DrainManager = require("./app/js/DrainManager")
 
 # Set up socket.io server
 app = express()
+Metrics.injectMetricsRoute(app)
 server = require('http').createServer(app)
 io = require('socket.io').listen(server)
 
 # Bind to sessions
 sessionStore = new RedisStore(client: sessionRedisClient)
 cookieParser = CookieParser(Settings.security.sessionSecret)
+
 sessionSockets = new SessionSockets(io, sessionStore, cookieParser, Settings.cookieName)
 
 io.configure ->
@@ -43,8 +47,16 @@ io.configure ->
 	io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling'])
 	io.set('log level', 1)
 
+app.get "/", (req, res, next) ->
+	res.send "real-time-sharelatex is alive"
+
 app.get "/status", (req, res, next) ->
 	res.send "real-time-sharelatex is alive"
+
+app.get "/debug/events", (req, res, next) ->
+	Settings.debugEvents = parseInt(req.query?.count,10) || 20
+	logger.log {count: Settings.debugEvents}, "starting debug mode"
+	res.send "debug mode will log next #{Settings.debugEvents} events"
 
 rclient = require("redis-sharelatex").createClient(Settings.redis.realtime)
 app.get "/health_check/redis", (req, res, next) ->
@@ -54,6 +66,8 @@ app.get "/health_check/redis", (req, res, next) ->
 			res.sendStatus 500
 		else
 			res.sendStatus 200
+
+Metrics.injectMetricsRoute(app)
 
 Router = require "./app/js/Router"
 Router.configure(app, io, sessionSockets)
@@ -73,3 +87,61 @@ server.listen port, host, (error) ->
 
 # Stop huge stack traces in logs from all the socket.io parsing steps.
 Error.stackTraceLimit = 10
+
+
+shutdownCleanly = (signal) ->
+	connectedClients = io.sockets.clients()?.length
+	if connectedClients == 0
+		logger.log("no clients connected, exiting")
+		process.exit()
+	else
+		logger.log {connectedClients}, "clients still connected, not shutting down yet"
+		setTimeout () ->
+			shutdownCleanly(signal)
+		, 10000
+
+forceDrain = ->
+	logger.log {delay_ms:Settings.forceDrainMsDelay}, "starting force drain after timeout"
+	setTimeout ()-> 
+		logger.log "starting drain"
+		DrainManager.startDrain(io, 4)
+	, Settings.forceDrainMsDelay
+
+shutDownInProgress = false
+if Settings.forceDrainMsDelay?
+	Settings.forceDrainMsDelay = parseInt(Settings.forceDrainMsDelay, 10)
+	logger.log forceDrainMsDelay: Settings.forceDrainMsDelay,"forceDrainMsDelay enabled"
+	for signal in ['SIGINT', 'SIGHUP', 'SIGQUIT', 'SIGUSR1', 'SIGUSR2', 'SIGTERM', 'SIGABRT']
+		process.on signal, ->
+			if shutDownInProgress
+				logger.log signal: signal, "shutdown already in progress, ignoring signal"
+				return
+			else
+				shutDownInProgress = true
+				logger.log signal: signal, "received interrupt, cleaning up"
+				shutdownCleanly(signal)
+				forceDrain()
+
+
+
+if Settings.continualPubsubTraffic
+	console.log "continualPubsubTraffic enabled"
+
+	pubSubClient = redis.createClient(Settings.redis.documentupdater)
+
+	publishJob = (channel, cb)->
+		json = JSON.stringify({health_check:true, date: new Date().toString()})
+		logger.debug {channel:channel}, "sending pub to keep connection alive"
+		pubSubClient.publish channel, json, (err)->
+			if err?
+				logger.err {err, channel}, "error publishing pubsub traffic to redis"
+			cb(err)
+
+	runPubSubTraffic = ->
+		async.map ["applied-ops", "editor-events"], publishJob, (err)->
+			setTimeout(runPubSubTraffic, 1000 * 60)
+
+	runPubSubTraffic()
+
+
+
