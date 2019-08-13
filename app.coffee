@@ -16,6 +16,14 @@ if Settings.sentry?.dsn?
 
 sessionRedisClient = redis.createClient(Settings.redis.websessions)
 
+if Settings.processLifeLimitSeconds?
+	getRandomArbitrary = (min, max)->
+		Math.random() * (max - min) + min
+	restartOffsetSeconds = Settings.processLifeLimitSeconds + (Settings.processLifeLimitSeconds * getRandomArbitrary(1, 1.2))
+	PROCESS_TERMINATION_TIME = Date.now() + (restartOffsetSeconds * 1000)
+	console.log("process will start to terminate at #{PROCESS_TERMINATION_TIME}")
+
+
 RedisStore = require('connect-redis')(session)
 SessionSockets = require('session.socket.io')
 CookieParser = require("cookie-parser")
@@ -31,6 +39,7 @@ app = express()
 Metrics.injectMetricsRoute(app)
 server = require('http').createServer(app)
 io = require('socket.io').listen(server)
+app.use(Metrics.http.monitor(logger))
 
 # Bind to sessions
 sessionStore = new RedisStore(client: sessionRedisClient)
@@ -65,7 +74,8 @@ app.get "/debug/events", (req, res, next) ->
 
 rclient = require("redis-sharelatex").createClient(Settings.redis.realtime)
 
-app.get "/health_check/redis", (req, res, next) ->
+
+redisHealthCheck = (req, res, next)->
 	rclient.healthCheck (error) ->
 		if error?
 			logger.err {err: error}, "failed redis health check"
@@ -77,7 +87,15 @@ app.get "/health_check/redis", (req, res, next) ->
 		else
 			res.sendStatus 200
 
-Metrics.injectMetricsRoute(app)
+
+app.get "/health_check/redis", redisHealthCheck
+
+
+app.get "/health_check", (req, res, next)->
+	if PROCESS_TERMINATION_TIME? and PROCESS_TERMINATION_TIME < Date.now()
+		logger.log "PROCESS_TERMINATION_TIME hit, marking process as unhealthy"
+		return res.sendStatus 500
+	redisHealthCheck(req, res, next)
 
 Router = require "./app/js/Router"
 Router.configure(app, io, sessionSockets)

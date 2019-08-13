@@ -50,6 +50,8 @@ settings =
 
 	forceDrainMsDelay: process.env['FORCE_DRAIN_MS_DELAY'] or false
 
+	processLifeLimitSeconds: process.env['PROCESS_LIFE_LIMIT_SECONDS']
+
 	continualPubsubTraffic: process.env['CONTINUAL_PUBSUB_TRAFFIC'] or false
 
 	checkEventOrder: process.env['CHECK_EVENT_ORDER'] or false
@@ -59,5 +61,4 @@ settings =
 	sentry:
 		dsn: process.env.SENTRY_DSN
 	
-# console.log settings.redis
 module.exports = settings
