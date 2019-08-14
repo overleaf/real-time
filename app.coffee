@@ -17,11 +17,15 @@ if Settings.sentry?.dsn?
 sessionRedisClient = redis.createClient(Settings.redis.websessions)
 
 if Settings.processLifeLimitSeconds?
+	processLifeLimitSeconds = parseInt(Settings.processLifeLimitSeconds, 10)
 	getRandomArbitrary = (min, max)->
 		Math.random() * (max - min) + min
-	restartOffsetSeconds = Settings.processLifeLimitSeconds + (Settings.processLifeLimitSeconds * getRandomArbitrary(1, 1.2))
-	PROCESS_TERMINATION_TIME = Date.now() + (restartOffsetSeconds * 1000)
-	console.log("process will start to terminate at #{PROCESS_TERMINATION_TIME}")
+	if processLifeLimitSeconds >= 3600
+		restartOffsetSeconds = Math.round(processLifeLimitSeconds * getRandomArbitrary(1, 1.5))
+		PROCESS_TERMINATION_TIME = Date.now() + restartOffsetSeconds * 1000
+		logger.log "process will start to terminate at #{new Date(PROCESS_TERMINATION_TIME)} after #{restartOffsetSeconds}s"
+	else
+		logger.error {processLifeLimitSeconds}, "refusing to set a process lifetime less than 1 hour"
 
 
 RedisStore = require('connect-redis')(session)
