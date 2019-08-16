@@ -25,6 +25,7 @@ module.exports =
 		multi.expire Keys.clientsInProject({project_id}), FOUR_DAYS_IN_S
 		
 		multi.hset Keys.connectedUser({project_id, client_id}), "last_updated_at", Date.now()
+		multi.hset Keys.connectedUser({project_id, client_id}), "socket_checked_at", Date.now()
 		multi.hset Keys.connectedUser({project_id, client_id}), "user_id", user._id
 		multi.hset Keys.connectedUser({project_id, client_id}), "first_name", user.first_name or ""
 		multi.hset Keys.connectedUser({project_id, client_id}), "last_name", user.last_name or ""
@@ -42,7 +43,7 @@ module.exports =
 	refreshClient: (project_id, client_id, callback = (err) ->) ->
 		logger.log project_id:project_id, client_id:client_id, "refreshing connected client"
 		multi = rclient.multi()
-		multi.hset Keys.connectedUser({project_id, client_id}), "last_updated_at", Date.now()
+		multi.hset Keys.connectedUser({project_id, client_id}), "socket_checked_at", Date.now()
 		multi.expire Keys.connectedUser({project_id, client_id}), USER_TIMEOUT_IN_S
 		multi.exec (err)->
 			if err?
@@ -57,17 +58,26 @@ module.exports =
 		multi.del Keys.connectedUser({project_id, client_id})
 		multi.exec callback
 
+	_isInactive: (connected_user) ->
+		# if the socket_checked_at field is present but old, the client is no
+		# longer responding
+		if connected_user?.socket_checked_at
+			age = (Date.now() - parseInt(connected_user.socket_checked_at,10)) / 1000
+			return true if age > REFRESH_TIMEOUT_IN_S
+		# otherwise assume the client is active by default
+		return false
 
 	_getConnectedUser: (project_id, client_id, callback)->
+		self = @
 		rclient.hgetall Keys.connectedUser({project_id, client_id}), (err, result)->
-			if !result? or Object.keys(result).length == 0
+			if !result? or Object.keys(result).length == 0 or !result.user_id or self._isInactive(result)
 				result =
 					connected : false
 					client_id:client_id
 			else
 				result.connected = true
 				result.client_id = client_id
-				result.client_age = (Date.now() - parseInt(result.last_updated_at,10)) / 1000
+
 				if result.cursorData?
 					try
 						result.cursorData = JSON.parse(result.cursorData)
@@ -86,6 +96,6 @@ module.exports =
 			async.series jobs, (err, users = [])->
 				return callback(err) if err?
 				users = users.filter (user) ->
-					user?.connected && user?.client_age < REFRESH_TIMEOUT_IN_S
+					user?.connected
 				callback null, users
 
