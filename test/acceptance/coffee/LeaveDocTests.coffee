@@ -58,21 +58,20 @@ describe "leaveDoc", ->
 					expect(@doc_id in client.rooms).to.equal false
 					done()
 
-		describe "when sending a leaveDoc request before the previous joinDoc request has completed", ->
-			beforeEach (done) ->
-				@client.emit "leaveDoc", @doc_id, () ->
-				@client.emit "joinDoc", @doc_id, () ->
-				@client.emit "leaveDoc", @doc_id, (error) ->
-					throw error if error?
-					done()
+			describe "when sending a leaveDoc request before the previous joinDoc request has completed", ->
+				beforeEach (done) ->
+					@client.emit "joinDoc", @doc_id, () ->
+					@client.emit "leaveDoc", @doc_id, (error) ->
+						throw error if error?
+						done()
 
-			it "should not trigger an error", ->
-				sinon.assert.neverCalledWith(logger.error, sinon.match.any, "not subscribed - shouldn't happen")
+				it "should not trigger an error", ->
+					sinon.assert.neverCalledWith(logger.error, sinon.match.any, "not subscribed - shouldn't happen")
 
-			it "should have left the doc room", (done) ->
-				RealTimeClient.getConnectedClient @client.socket.sessionid, (error, client) =>
-					expect(@doc_id in client.rooms).to.equal false
-					done()
+				it "should have left the doc room", (done) ->
+					RealTimeClient.getConnectedClient @client.socket.sessionid, (error, client) =>
+						expect(@doc_id in client.rooms).to.equal false
+						done()
 
 		describe "when sending a leaveDoc for a room the client has not joined ", ->
 			beforeEach (done) ->
