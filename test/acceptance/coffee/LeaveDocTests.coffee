@@ -61,9 +61,11 @@ describe "leaveDoc", ->
 			describe "when sending a leaveDoc request before the previous joinDoc request has completed", ->
 				beforeEach (done) ->
 					@client.emit "joinDoc", @doc_id, () ->
-					@client.emit "leaveDoc", @doc_id, (error) ->
-						throw error if error?
-						done()
+					setTimeout () =>
+						@client.emit "leaveDoc", @doc_id, (error) ->
+							throw error if error?
+							done()
+					, 1
 
 				it "should not trigger an error", ->
 					sinon.assert.neverCalledWith(logger.error, sinon.match.any, "not subscribed - shouldn't happen")
