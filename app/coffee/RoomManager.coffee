@@ -64,7 +64,6 @@ module.exports = RoomManager =
             metrics.gauge "room-listeners", RoomEvents.eventNames().length
         else
             logger.log {client: client.id, entity, id, beforeCount}, "client joined existing room"
-            client.join id
             callback()
 
     leaveEntity: (client, entity, id) ->
