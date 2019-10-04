@@ -124,7 +124,7 @@ if Settings.shutdownDrainTimeWindow?
 	shutdownDrainTimeWindow = parseInt(Settings.shutdownDrainTimeWindow, 10)
 	logger.log shutdownDrainTimeWindow: shutdownDrainTimeWindow,"shutdownDrainTimeWindow enabled"
 	for signal in ['SIGINT', 'SIGHUP', 'SIGQUIT', 'SIGUSR1', 'SIGUSR2', 'SIGTERM', 'SIGABRT']
-		process.on signal, ->
+		process.on signal, do (signal) -> () ->
 			if Settings.shutDownInProgress
 				logger.log signal: signal, "shutdown already in progress, ignoring signal"
 				return
