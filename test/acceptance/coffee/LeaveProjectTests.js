@@ -1,3 +1,10 @@
+/* eslint-disable
+    camelcase,
+    handle-callback-err,
+    no-throw-literal,
+*/
+// TODO: This file was created by bulk-decaffeinate.
+// Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
  * DS101: Remove unnecessary use of Array.from
@@ -11,7 +18,7 @@ const FixturesManager = require("./helpers/FixturesManager");
 const async = require("async");
 
 describe("leaveProject", function() {
-	before(done => MockDocUpdaterServer.run(done));
+	before(function(done) { return MockDocUpdaterServer.run(done); });
 		
 	describe("with other clients in the project", function() {
 		before(function(done) {
@@ -78,7 +85,7 @@ describe("leaveProject", function() {
 	
 		it("should no longer list the client in connected users", function(done) {
 			return this.clientB.emit("clientTracking.getConnectedUsers", (error, users) => {
-				for (let user of Array.from(users)) {
+				for (const user of Array.from(users)) {
 					if (user.client_id === this.clientA.socket.sessionid) {
 						throw "Expected clientA to not be listed in connected users";
 					}
