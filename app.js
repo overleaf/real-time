@@ -9,7 +9,6 @@ const Metrics = require('metrics-sharelatex')
 const Settings = require('settings-sharelatex')
 Metrics.initialize(Settings.appName || 'real-time')
 const async = require('async')
-const _ = require('underscore')
 
 const logger = require('logger-sharelatex')
 logger.initialize('real-time')
@@ -205,7 +204,7 @@ if (Settings.shutdownDrainTimeWindow != null) {
 }
 
 if (Settings.continualPubsubTraffic) {
-  console.log('continualPubsubTraffic enabled')
+  logger.log('continualPubsubTraffic enabled')
 
   const pubsubClient = redis.createClient(Settings.redis.pubsub)
   const clusterClient = redis.createClient(Settings.redis.websessions)
@@ -231,9 +230,12 @@ if (Settings.continualPubsubTraffic) {
   }
 
   var runPubSubTraffic = () =>
-    async.map(['applied-ops', 'editor-events'], publishJob, err =>
+    async.map(['applied-ops', 'editor-events'], publishJob, err => {
+      if (err) {
+        logger.err(err)
+      }
       setTimeout(runPubSubTraffic, 1000 * 20)
-    )
+    })
 
   runPubSubTraffic()
 }
