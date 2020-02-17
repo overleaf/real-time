@@ -1,108 +1,147 @@
-chai = require('chai')
-should = chai.should()
-sinon = require("sinon")
-modulePath = "../../../app/js/ChannelManager.js"
-SandboxedModule = require('sandboxed-module')
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
+const chai = require('chai');
+const should = chai.should();
+const sinon = require("sinon");
+const modulePath = "../../../app/js/ChannelManager.js";
+const SandboxedModule = require('sandboxed-module');
 
-describe 'ChannelManager', ->
-	beforeEach ->
-		@rclient = {}
-		@other_rclient = {}
-		@ChannelManager = SandboxedModule.require modulePath, requires:
-			"settings-sharelatex": @settings = {}
-			"metrics-sharelatex": @metrics = {inc: sinon.stub()}
-			"logger-sharelatex": @logger = { log: sinon.stub(), warn: sinon.stub(), error: sinon.stub() }
+describe('ChannelManager', function() {
+	beforeEach(function() {
+		this.rclient = {};
+		this.other_rclient = {};
+		return this.ChannelManager = SandboxedModule.require(modulePath, { requires: {
+			"settings-sharelatex": (this.settings = {}),
+			"metrics-sharelatex": (this.metrics = {inc: sinon.stub()}),
+			"logger-sharelatex": (this.logger = { log: sinon.stub(), warn: sinon.stub(), error: sinon.stub() })
+		}
+	});});
 	
-	describe "subscribe", ->
+	describe("subscribe", function() {
 
-		describe "when there is no existing subscription for this redis client", ->
-			beforeEach ->
-				@rclient.subscribe = sinon.stub()
-				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+		describe("when there is no existing subscription for this redis client", function() {
+			beforeEach(function() {
+				this.rclient.subscribe = sinon.stub();
+				return this.ChannelManager.subscribe(this.rclient, "applied-ops", "1234567890abcdef");
+			});
 
-			it "should subscribe to the redis channel", ->
-				@rclient.subscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal true
+			return it("should subscribe to the redis channel", function() {
+				return this.rclient.subscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal(true);
+			});
+		});
 
-		describe "when there is an existing subscription for this redis client", ->
-			beforeEach ->
-				@rclient.subscribe = sinon.stub()
-				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub()  # discard the original stub
-				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+		describe("when there is an existing subscription for this redis client", function() {
+			beforeEach(function() {
+				this.rclient.subscribe = sinon.stub();
+				this.ChannelManager.subscribe(this.rclient, "applied-ops", "1234567890abcdef");
+				this.rclient.subscribe = sinon.stub();  // discard the original stub
+				return this.ChannelManager.subscribe(this.rclient, "applied-ops", "1234567890abcdef");
+			});
 
-			it "should not subscribe to the redis channel", ->
-				@rclient.subscribe.called.should.equal false
+			return it("should not subscribe to the redis channel", function() {
+				return this.rclient.subscribe.called.should.equal(false);
+			});
+		});
 
-		describe "when there is an existing subscription for another redis client but not this one", ->
-			beforeEach ->
-				@other_rclient.subscribe = sinon.stub()
-				@ChannelManager.subscribe @other_rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub()  # discard the original stub
-				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+		return describe("when there is an existing subscription for another redis client but not this one", function() {
+			beforeEach(function() {
+				this.other_rclient.subscribe = sinon.stub();
+				this.ChannelManager.subscribe(this.other_rclient, "applied-ops", "1234567890abcdef");
+				this.rclient.subscribe = sinon.stub();  // discard the original stub
+				return this.ChannelManager.subscribe(this.rclient, "applied-ops", "1234567890abcdef");
+			});
 
-			it "should subscribe to the redis channel on this redis client", ->
-				@rclient.subscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal true
+			return it("should subscribe to the redis channel on this redis client", function() {
+				return this.rclient.subscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal(true);
+			});
+		});
+	});
 
-	describe "unsubscribe", ->
+	describe("unsubscribe", function() {
 
-		describe "when there is no existing subscription for this redis client", ->
-			beforeEach ->
-				@rclient.unsubscribe = sinon.stub()
-				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+		describe("when there is no existing subscription for this redis client", function() {
+			beforeEach(function() {
+				this.rclient.unsubscribe = sinon.stub();
+				return this.ChannelManager.unsubscribe(this.rclient, "applied-ops", "1234567890abcdef");
+			});
 
-			it "should not unsubscribe from the redis channel", ->
-				@rclient.unsubscribe.called.should.equal false
+			return it("should not unsubscribe from the redis channel", function() {
+				return this.rclient.unsubscribe.called.should.equal(false);
+			});
+		});
 
 
-		describe "when there is an existing subscription for this another redis client but not this one", ->
-			beforeEach ->
-				@other_rclient.subscribe = sinon.stub()
-				@rclient.unsubscribe = sinon.stub()  
-				@ChannelManager.subscribe @other_rclient, "applied-ops", "1234567890abcdef"
-				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+		describe("when there is an existing subscription for this another redis client but not this one", function() {
+			beforeEach(function() {
+				this.other_rclient.subscribe = sinon.stub();
+				this.rclient.unsubscribe = sinon.stub();  
+				this.ChannelManager.subscribe(this.other_rclient, "applied-ops", "1234567890abcdef");
+				return this.ChannelManager.unsubscribe(this.rclient, "applied-ops", "1234567890abcdef");
+			});
 
-			it "should not unsubscribe from the redis channel on this client", ->
-				@rclient.unsubscribe.called.should.equal false
+			return it("should not unsubscribe from the redis channel on this client", function() {
+				return this.rclient.unsubscribe.called.should.equal(false);
+			});
+		});
 
-		describe "when there is an existing subscription for this redis client", ->
-			beforeEach ->
-				@rclient.subscribe = sinon.stub()
-				@rclient.unsubscribe = sinon.stub()  
-				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+		return describe("when there is an existing subscription for this redis client", function() {
+			beforeEach(function() {
+				this.rclient.subscribe = sinon.stub();
+				this.rclient.unsubscribe = sinon.stub();  
+				this.ChannelManager.subscribe(this.rclient, "applied-ops", "1234567890abcdef");
+				return this.ChannelManager.unsubscribe(this.rclient, "applied-ops", "1234567890abcdef");
+			});
 
-			it "should unsubscribe from the redis channel", ->
-				@rclient.unsubscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal true
+			return it("should unsubscribe from the redis channel", function() {
+				return this.rclient.unsubscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal(true);
+			});
+		});
+	});
 
-	describe "publish", ->
+	return describe("publish", function() {
 
-		describe "when the channel is 'all'", ->
-			beforeEach ->
-				@rclient.publish = sinon.stub()
-				@ChannelManager.publish @rclient, "applied-ops", "all", "random-message"
+		describe("when the channel is 'all'", function() {
+			beforeEach(function() {
+				this.rclient.publish = sinon.stub();
+				return this.ChannelManager.publish(this.rclient, "applied-ops", "all", "random-message");
+			});
 
-			it "should publish on the base channel", ->
-				@rclient.publish.calledWithExactly("applied-ops", "random-message").should.equal true
+			return it("should publish on the base channel", function() {
+				return this.rclient.publish.calledWithExactly("applied-ops", "random-message").should.equal(true);
+			});
+		});
 
-		describe "when the channel has an specific id", ->
+		return describe("when the channel has an specific id", function() {
 
-			describe "when the individual channel setting is false", ->
-				beforeEach ->
-					@rclient.publish = sinon.stub()
-					@settings.publishOnIndividualChannels = false
-					@ChannelManager.publish @rclient, "applied-ops", "1234567890abcdef", "random-message"
+			describe("when the individual channel setting is false", function() {
+				beforeEach(function() {
+					this.rclient.publish = sinon.stub();
+					this.settings.publishOnIndividualChannels = false;
+					return this.ChannelManager.publish(this.rclient, "applied-ops", "1234567890abcdef", "random-message");
+				});
 
-				it "should publish on the per-id channel", ->
-					@rclient.publish.calledWithExactly("applied-ops", "random-message").should.equal true
-					@rclient.publish.calledOnce.should.equal true
+				return it("should publish on the per-id channel", function() {
+					this.rclient.publish.calledWithExactly("applied-ops", "random-message").should.equal(true);
+					return this.rclient.publish.calledOnce.should.equal(true);
+				});
+			});
 
-			describe "when the individual channel setting is true", ->
-				beforeEach ->
-					@rclient.publish = sinon.stub()
-					@settings.publishOnIndividualChannels = true
-					@ChannelManager.publish @rclient, "applied-ops", "1234567890abcdef", "random-message"
+			return describe("when the individual channel setting is true", function() {
+				beforeEach(function() {
+					this.rclient.publish = sinon.stub();
+					this.settings.publishOnIndividualChannels = true;
+					return this.ChannelManager.publish(this.rclient, "applied-ops", "1234567890abcdef", "random-message");
+				});
 
-				it "should publish on the per-id channel", ->
-					@rclient.publish.calledWithExactly("applied-ops:1234567890abcdef", "random-message").should.equal true
-					@rclient.publish.calledOnce.should.equal true
+				return it("should publish on the per-id channel", function() {
+					this.rclient.publish.calledWithExactly("applied-ops:1234567890abcdef", "random-message").should.equal(true);
+					return this.rclient.publish.calledOnce.should.equal(true);
+				});
+			});
+		});
+	});
+});
 
