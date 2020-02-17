@@ -1,3 +1,11 @@
+/* eslint-disable
+    camelcase,
+    no-return-assign,
+    no-throw-literal,
+    no-unused-vars,
+*/
+// TODO: This file was created by bulk-decaffeinate.
+// Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
  * DS101: Remove unnecessary use of Array.from
@@ -50,7 +58,7 @@ describe('WebsocketController', function() {
 		}
 	});});
 
-	afterEach(() => tk.reset());
+	afterEach(function() { return tk.reset(); });
 
 	describe("joinProject", function() {
 		describe("when authorised", function() {
@@ -834,39 +842,39 @@ describe('WebsocketController', function() {
 			return this.AuthorizationManager.assertClientCanViewProjectAndDoc = sinon.stub();
 		});
 
-		describe("with a read-write client", () => it("should return successfully", function(done) {
+		describe("with a read-write client", function() { return it("should return successfully", function(done) {
             this.AuthorizationManager.assertClientCanEditProjectAndDoc.yields(null);
-            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.edit_update, function(error) {
+            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.edit_update, (error) => {
                 expect(error).to.be.null;
                 return done();
             });
-        }));
+        }); });
 
-		describe("with a read-only client and an edit op", () => it("should return an error", function(done) {
+		describe("with a read-only client and an edit op", function() { return it("should return an error", function(done) {
             this.AuthorizationManager.assertClientCanEditProjectAndDoc.yields(new Error("not authorized"));
             this.AuthorizationManager.assertClientCanViewProjectAndDoc.yields(null);
-            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.edit_update, function(error) {
+            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.edit_update, (error) => {
                 expect(error.message).to.equal("not authorized");
                 return done();
             });
-        }));
+        }); });
 
-		describe("with a read-only client and a comment op", () => it("should return successfully", function(done) {
+		describe("with a read-only client and a comment op", function() { return it("should return successfully", function(done) {
             this.AuthorizationManager.assertClientCanEditProjectAndDoc.yields(new Error("not authorized"));
             this.AuthorizationManager.assertClientCanViewProjectAndDoc.yields(null);
-            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.comment_update, function(error) {
+            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.comment_update, (error) => {
                 expect(error).to.be.null;
                 return done();
             });
-        }));
+        }); });
 
-		return describe("with a totally unauthorized client", () => it("should return an error", function(done) {
+		return describe("with a totally unauthorized client", function() { return it("should return an error", function(done) {
             this.AuthorizationManager.assertClientCanEditProjectAndDoc.yields(new Error("not authorized"));
             this.AuthorizationManager.assertClientCanViewProjectAndDoc.yields(new Error("not authorized"));
-            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.comment_update, function(error) {
+            return this.WebsocketController._assertClientCanApplyUpdate(this.client, this.doc_id, this.comment_update, (error) => {
                 expect(error.message).to.equal("not authorized");
                 return done();
             });
-        }));
+        }); });
 	});
 });

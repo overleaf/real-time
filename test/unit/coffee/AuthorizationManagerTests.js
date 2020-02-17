@@ -1,3 +1,9 @@
+/* eslint-disable
+    no-return-assign,
+    no-unused-vars,
+*/
+// TODO: This file was created by bulk-decaffeinate.
+// Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
  * DS102: Remove unnecessary code created because of implicit returns
@@ -35,7 +41,7 @@ describe('AuthorizationManager', function() {
 	describe("assertClientCanViewProject", function() {
 		it("should allow the readOnly privilegeLevel", function(done) {
 			this.client.params.privilege_level = "readOnly";
-			return this.AuthorizationManager.assertClientCanViewProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanViewProject(this.client, (error) => {
 				expect(error).to.be.null;
 				return done();
 			});
@@ -43,7 +49,7 @@ describe('AuthorizationManager', function() {
 	
 		it("should allow the readAndWrite privilegeLevel", function(done) {
 			this.client.params.privilege_level = "readAndWrite";
-			return this.AuthorizationManager.assertClientCanViewProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanViewProject(this.client, (error) => {
 				expect(error).to.be.null;
 				return done();
 			});
@@ -51,7 +57,7 @@ describe('AuthorizationManager', function() {
 				
 		it("should allow the owner privilegeLevel", function(done) {
 			this.client.params.privilege_level = "owner";
-			return this.AuthorizationManager.assertClientCanViewProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanViewProject(this.client, (error) => {
 				expect(error).to.be.null;
 				return done();
 			});
@@ -59,7 +65,7 @@ describe('AuthorizationManager', function() {
 				
 		return it("should return an error with any other privilegeLevel", function(done) {
 			this.client.params.privilege_level = "unknown";
-			return this.AuthorizationManager.assertClientCanViewProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanViewProject(this.client, (error) => {
 				error.message.should.equal("not authorized");
 				return done();
 			});
@@ -69,7 +75,7 @@ describe('AuthorizationManager', function() {
 	describe("assertClientCanEditProject", function() {
 		it("should not allow the readOnly privilegeLevel", function(done) {
 			this.client.params.privilege_level = "readOnly";
-			return this.AuthorizationManager.assertClientCanEditProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanEditProject(this.client, (error) => {
 				error.message.should.equal("not authorized");
 				return done();
 			});
@@ -77,7 +83,7 @@ describe('AuthorizationManager', function() {
 	
 		it("should allow the readAndWrite privilegeLevel", function(done) {
 			this.client.params.privilege_level = "readAndWrite";
-			return this.AuthorizationManager.assertClientCanEditProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanEditProject(this.client, (error) => {
 				expect(error).to.be.null;
 				return done();
 			});
@@ -85,7 +91,7 @@ describe('AuthorizationManager', function() {
 				
 		it("should allow the owner privilegeLevel", function(done) {
 			this.client.params.privilege_level = "owner";
-			return this.AuthorizationManager.assertClientCanEditProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanEditProject(this.client, (error) => {
 				expect(error).to.be.null;
 				return done();
 			});
@@ -93,7 +99,7 @@ describe('AuthorizationManager', function() {
 				
 		return it("should return an error with any other privilegeLevel", function(done) {
 			this.client.params.privilege_level = "unknown";
-			return this.AuthorizationManager.assertClientCanEditProject(this.client, function(error) {
+			return this.AuthorizationManager.assertClientCanEditProject(this.client, (error) => {
 				error.message.should.equal("not authorized");
 				return done();
 			});
@@ -139,12 +145,12 @@ describe('AuthorizationManager', function() {
 				return this.client.params.privilege_level = "readOnly";
 			});
 
-			describe("and not authorised at the document level", () => it("should not allow access", function() {
+			describe("and not authorised at the document level", function() { return it("should not allow access", function() {
                 this.AuthorizationManager.assertClientCanViewProjectAndDoc(this.client, this.doc_id, this.callback);
                 return this.callback
                     .calledWith(new Error("not authorised"))
                     .should.equal(true);
-            }));
+            }); });
 
 			describe("and authorised at the document level", function() {
 				beforeEach(function(done) {
@@ -213,12 +219,12 @@ describe('AuthorizationManager', function() {
 				return this.client.params.privilege_level = "readAndWrite";
 			});
 
-			describe("and not authorised at the document level", () => it("should not allow access", function() {
+			describe("and not authorised at the document level", function() { return it("should not allow access", function() {
                 this.AuthorizationManager.assertClientCanEditProjectAndDoc(this.client, this.doc_id, this.callback);
                 return this.callback
                     .calledWith(new Error("not authorised"))
                     .should.equal(true);
-            }));
+            }); });
 
 			describe("and authorised at the document level", function() {
 				beforeEach(function(done) {

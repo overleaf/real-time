@@ -1,3 +1,9 @@
+/* eslint-disable
+    no-return-assign,
+    no-unused-vars,
+*/
+// TODO: This file was created by bulk-decaffeinate.
+// Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
  * DS102: Remove unnecessary code created because of implicit returns
@@ -213,7 +219,7 @@ describe('RoomManager', function() {
 	});
 
 
-	return describe("leaveProjectAndDocs", () => describe("when the client is connected to the project and multiple docs", function() {
+	return describe("leaveProjectAndDocs", function() { return describe("when the client is connected to the project and multiple docs", function() {
 
         beforeEach(function() {
             this.RoomManager._roomsClientIsIn = sinon.stub().returns([this.project_id, this.doc_id, this.other_doc_id]);
@@ -326,5 +332,5 @@ describe('RoomManager', function() {
                 return this.RoomEvents.emit.called.should.equal(false);
             });
         });
-    }));
+    }); });
 });
