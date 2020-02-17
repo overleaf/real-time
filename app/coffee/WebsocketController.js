@@ -1,3 +1,9 @@
+/* eslint-disable
+    camelcase,
+    handle-callback-err,
+*/
+// TODO: This file was created by bulk-decaffeinate.
+// Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
  * DS101: Remove unnecessary use of Array.from
@@ -62,7 +68,7 @@ module.exports = (WebsocketController = {
 	// We want to flush a project if there are no more (local) connected clients
 	// but we need to wait for the triggering client to disconnect. How long we wait
 	// is determined by FLUSH_IF_EMPTY_DELAY.
-	FLUSH_IF_EMPTY_DELAY: 500, //ms
+	FLUSH_IF_EMPTY_DELAY: 500, // ms
 	leaveProject(io, client, callback) {
 		if (callback == null) { callback = function(error) {}; }
 		metrics.inc("editor.leave-project");
@@ -147,10 +153,10 @@ module.exports = (WebsocketController = {
 						}
 						if (options.encodeRanges) {
 							try {
-								for (let comment of Array.from((ranges != null ? ranges.comments : undefined) || [])) {
+								for (const comment of Array.from((ranges != null ? ranges.comments : undefined) || [])) {
 									if (comment.op.c != null) { comment.op.c = encodeForWebsockets(comment.op.c); }
 								}
-								for (let change of Array.from((ranges != null ? ranges.changes : undefined) || [])) {
+								for (const change of Array.from((ranges != null ? ranges.changes : undefined) || [])) {
 									if (change.op.i != null) { change.op.i = encodeForWebsockets(change.op.i); }
 									if (change.op.d != null) { change.op.d = encodeForWebsockets(change.op.d); }
 								}
@@ -179,7 +185,7 @@ module.exports = (WebsocketController = {
 			// we could remove permission when user leaves a doc, but because
 			// the connection is per-project, we continue to allow access
 			// after the initial joinDoc since we know they are already authorised.
-			//# AuthorizationManager.removeAccessToDoc client, doc_id
+			// # AuthorizationManager.removeAccessToDoc client, doc_id
 			return callback();
 		});
 	},
@@ -207,12 +213,7 @@ module.exports = (WebsocketController = {
 				} else {
 					cursorData.name = first_name && last_name ?
 						`${first_name} ${last_name}`
-					: first_name ?
-						first_name
-					: last_name ?
-						last_name
-					:
-						"";
+					: first_name || (last_name || "");
 					ConnectedUsersManager.updateUserPosition(project_id, client.id, {
 						first_name,
 						last_name,
@@ -301,7 +302,7 @@ module.exports = (WebsocketController = {
 	},
 
 	_isCommentUpdate(update) {
-		for (let op of Array.from(update.op)) {
+		for (const op of Array.from(update.op)) {
 			if ((op.c == null)) {
 				return false;
 			}

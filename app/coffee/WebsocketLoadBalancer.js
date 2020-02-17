@@ -1,3 +1,8 @@
+/* eslint-disable
+    camelcase,
+*/
+// TODO: This file was created by bulk-decaffeinate.
+// Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
  * DS101: Remove unnecessary use of Array.from
@@ -57,7 +62,7 @@ module.exports = (WebsocketLoadBalancer = {
 	listenForEditorEvents(io) {
 		logger.log({rclients: this.rclientPubList.length}, "publishing editor events");
 		logger.log({rclients: this.rclientSubList.length}, "listening for editor events");
-		for (let rclientSub of Array.from(this.rclientSubList)) {
+		for (const rclientSub of Array.from(this.rclientSubList)) {
 			rclientSub.subscribe("editor-events");
 			rclientSub.on("message", function(channel, message) {
 				if (Settings.debugEvents > 0) { EventLogger.debugEvent(channel, message); }
