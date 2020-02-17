@@ -1,5 +1,8 @@
 // EventEmitter has been removed from process in node >= 7
 // https://github.com/nodejs/node/commit/62b544290a075fe38e233887a06c408ba25a1c71
+
+/* eslint-disable node/no-deprecated-api */
+
 if (process.versions.node.split('.')[0] >= 7) {
   process.EventEmitter = require('events')
 }
