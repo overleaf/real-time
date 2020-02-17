@@ -13,9 +13,9 @@
 
 /* eslint-disable */
 
-var Url = require('url');
-  var spawn = require('child_process').spawn;
-  var fs = require('fs')
+var Url = require('url')
+var spawn = require('child_process').spawn
+var fs = require('fs')
 
 exports.XMLHttpRequest = function() {
   /**
@@ -252,8 +252,8 @@ exports.XMLHttpRequest = function() {
       throw 'INVALID_STATE_ERR: send has already been called'
     }
 
-    var ssl = false;
-      var local = false
+    var ssl = false
+    var local = false
     var url = Url.parse(settings.url)
 
     // Determine the server
@@ -366,14 +366,14 @@ exports.XMLHttpRequest = function() {
       self.dispatchEvent('readystatechange')
 
       // Create the request
-      request = doRequest(options, (resp) => {
+      request = doRequest(options, resp => {
         response = resp
         response.setEncoding('utf8')
 
         setState(self.HEADERS_RECEIVED)
         self.status = response.statusCode
 
-        response.on('data', (chunk) => {
+        response.on('data', chunk => {
           // Make sure there's some data
           if (chunk) {
             self.responseText += chunk
@@ -392,10 +392,10 @@ exports.XMLHttpRequest = function() {
           }
         })
 
-        response.on('error', (error) => {
+        response.on('error', error => {
           self.handleError(error)
         })
-      }).on('error', (error) => {
+      }).on('error', error => {
         self.handleError(error)
       })
 
@@ -530,7 +530,7 @@ exports.XMLHttpRequest = function() {
   this.removeEventListener = function(event, callback) {
     if (event in listeners) {
       // Filter will return a new array with the callback removed
-      listeners[event] = listeners[event].filter((ev) => {
+      listeners[event] = listeners[event].filter(ev => {
         return ev !== callback
       })
     }

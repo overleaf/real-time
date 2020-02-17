@@ -17,10 +17,10 @@ if (io.version === '0.9.16' || io.version === '0.9.19') {
 }
 
 function patchedFrameHandler(opcode, str) {
-  var dataBuffer = new Buffer(str);
-    var dataLength = dataBuffer.length;
-    var startOffset = 2;
-    var secondByte = dataLength
+  var dataBuffer = new Buffer(str)
+  var dataLength = dataBuffer.length
+  var startOffset = 2
+  var secondByte = dataLength
   if (dataLength === 65536) {
     console.log('fixing invalid frame length in socket.io')
   }
