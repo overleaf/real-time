@@ -11,6 +11,8 @@
  * @license MIT
  */
 
+/* eslint-disable */
+
 var Url = require('url');
   var spawn = require('child_process').spawn;
   var fs = require('fs')
