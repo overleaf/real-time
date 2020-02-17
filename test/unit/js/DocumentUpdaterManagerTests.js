@@ -118,7 +118,6 @@ describe('DocumentUpdaterManager', function() {
         return this.callback.calledWith(this.error).should.equal(true)
       })
     })
-
     ;[404, 422].forEach(statusCode =>
       describe(`when the document updater returns a ${statusCode} status code`, function() {
         beforeEach(function() {

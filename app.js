@@ -152,7 +152,6 @@ var shutdownCleanly = function(signal) {
 const drainAndShutdown = function(signal) {
   if (Settings.shutDownInProgress) {
     logger.warn({ signal }, 'shutdown already in progress, ignoring signal')
-    
   } else {
     Settings.shutDownInProgress = true
     logger.warn(

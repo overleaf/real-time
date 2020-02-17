@@ -2,15 +2,10 @@ const settings = {
   redis: {
     pubsub: {
       host:
-        process.env.PUBSUB_REDIS_HOST ||
-        process.env.REDIS_HOST ||
-        'localhost',
-      port:
-        process.env.PUBSUB_REDIS_PORT || process.env.REDIS_PORT || '6379',
+        process.env.PUBSUB_REDIS_HOST || process.env.REDIS_HOST || 'localhost',
+      port: process.env.PUBSUB_REDIS_PORT || process.env.REDIS_PORT || '6379',
       password:
-        process.env.PUBSUB_REDIS_PASSWORD ||
-        process.env.REDIS_PASSWORD ||
-        '',
+        process.env.PUBSUB_REDIS_PASSWORD || process.env.REDIS_PASSWORD || '',
       maxRetriesPerRequest: parseInt(
         process.env.PUBSUB_REDIS_MAX_RETRIES_PER_REQUEST ||
           process.env.REDIS_MAX_RETRIES_PER_REQUEST ||
@@ -24,9 +19,7 @@ const settings = {
         process.env.REDIS_HOST ||
         'localhost',
       port:
-        process.env.REAL_TIME_REDIS_PORT ||
-        process.env.REDIS_PORT ||
-        '6379',
+        process.env.REAL_TIME_REDIS_PORT || process.env.REDIS_PORT || '6379',
       password:
         process.env.REAL_TIME_REDIS_PASSWORD ||
         process.env.REDIS_PASSWORD ||
@@ -52,9 +45,7 @@ const settings = {
         process.env.REDIS_HOST ||
         'localhost',
       port:
-        process.env.DOC_UPDATER_REDIS_PORT ||
-        process.env.REDIS_PORT ||
-        '6379',
+        process.env.DOC_UPDATER_REDIS_PORT || process.env.REDIS_PORT || '6379',
       password:
         process.env.DOC_UPDATER_REDIS_PASSWORD ||
         process.env.REDIS_PASSWORD ||
@@ -72,16 +63,10 @@ const settings = {
     },
 
     websessions: {
-      host:
-        process.env.WEB_REDIS_HOST ||
-        process.env.REDIS_HOST ||
-        'localhost',
-      port:
-        process.env.WEB_REDIS_PORT || process.env.REDIS_PORT || '6379',
+      host: process.env.WEB_REDIS_HOST || process.env.REDIS_HOST || 'localhost',
+      port: process.env.WEB_REDIS_PORT || process.env.REDIS_PORT || '6379',
       password:
-        process.env.WEB_REDIS_PASSWORD ||
-        process.env.REDIS_PASSWORD ||
-        '',
+        process.env.WEB_REDIS_PASSWORD || process.env.REDIS_PASSWORD || '',
       maxRetriesPerRequest: parseInt(
         process.env.WEB_REDIS_MAX_RETRIES_PER_REQUEST ||
           process.env.REDIS_MAX_RETRIES_PER_REQUEST ||
