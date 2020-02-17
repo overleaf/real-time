@@ -1,55 +1,76 @@
-XMLHttpRequest = require("../../libs/XMLHttpRequest").XMLHttpRequest
-io = require("socket.io-client")
+/*
+ * decaffeinate suggestions:
+ * DS102: Remove unnecessary code created because of implicit returns
+ * DS207: Consider shorter variations of null checks
+ * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
+ */
+let Client;
+const {
+    XMLHttpRequest
+} = require("../../libs/XMLHttpRequest");
+const io = require("socket.io-client");
 
-request = require "request"
-Settings = require "settings-sharelatex"
-redis = require "redis-sharelatex"
-rclient = redis.createClient(Settings.redis.websessions)
+const request = require("request");
+const Settings = require("settings-sharelatex");
+const redis = require("redis-sharelatex");
+const rclient = redis.createClient(Settings.redis.websessions);
 
-uid = require('uid-safe').sync
-signature = require("cookie-signature")
+const uid = require('uid-safe').sync;
+const signature = require("cookie-signature");
 
-io.util.request = () ->
-	xhr = new XMLHttpRequest()
-	_open = xhr.open
-	xhr.open = () =>
-		_open.apply(xhr, arguments)
-		if Client.cookie?
-			xhr.setRequestHeader("Cookie", Client.cookie)
-	return xhr
+io.util.request = function() {
+	const xhr = new XMLHttpRequest();
+	const _open = xhr.open;
+	xhr.open = function() {
+		_open.apply(xhr, arguments);
+		if (Client.cookie != null) {
+			return xhr.setRequestHeader("Cookie", Client.cookie);
+		}
+	}.bind(this);
+	return xhr;
+};
 
-module.exports = Client =
-	cookie: null
+module.exports = (Client = {
+	cookie: null,
 
-	setSession: (session, callback = (error) ->) ->
-		sessionId = uid(24)
-		session.cookie = {}
-		rclient.set "sess:" + sessionId, JSON.stringify(session), (error) ->
-			return callback(error) if error?
-			secret = Settings.security.sessionSecret
-			cookieKey = 's:' + signature.sign(sessionId, secret)
-			Client.cookie = "#{Settings.cookieName}=#{cookieKey}"
-			callback()
+	setSession(session, callback) {
+		if (callback == null) { callback = function(error) {}; }
+		const sessionId = uid(24);
+		session.cookie = {};
+		return rclient.set("sess:" + sessionId, JSON.stringify(session), function(error) {
+			if (error != null) { return callback(error); }
+			const secret = Settings.security.sessionSecret;
+			const cookieKey = 's:' + signature.sign(sessionId, secret);
+			Client.cookie = `${Settings.cookieName}=${cookieKey}`;
+			return callback();
+		});
+	},
 			
-	unsetSession: (callback = (error) ->) ->
-		Client.cookie = null
-		callback()
+	unsetSession(callback) {
+		if (callback == null) { callback = function(error) {}; }
+		Client.cookie = null;
+		return callback();
+	},
 			
-	connect: (cookie) ->
-		client = io.connect("http://localhost:3026", 'force new connection': true)
-		return client
+	connect(cookie) {
+		const client = io.connect("http://localhost:3026", {'force new connection': true});
+		return client;
+	},
 		
-	getConnectedClients: (callback = (error, clients) ->) ->
-		request.get {
-			url: "http://localhost:3026/clients"
+	getConnectedClients(callback) {
+		if (callback == null) { callback = function(error, clients) {}; }
+		return request.get({
+			url: "http://localhost:3026/clients",
 			json: true
-		}, (error, response, data) ->
-			callback error, data
+		}, (error, response, data) => callback(error, data));
+	},
 		
-	getConnectedClient: (client_id, callback = (error, clients) ->) ->
-		request.get {
-			url: "http://localhost:3026/clients/#{client_id}"
+	getConnectedClient(client_id, callback) {
+		if (callback == null) { callback = function(error, clients) {}; }
+		return request.get({
+			url: `http://localhost:3026/clients/${client_id}`,
 			json: true
-		}, (error, response, data) ->
-			callback error, data
+		}, (error, response, data) => callback(error, data));
+	}
+});
 
