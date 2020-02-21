@@ -12,15 +12,18 @@ describe "Session", ->
 			}, (error) =>
 				throw error if error?
 				@client = RealTimeClient.connect()
-				return done()
+
+				@disconnected = false
+				@client.on "disconnect", () =>
+					@disconnected = true
+
+				@client.on "connect", () ->
+					done()
 			return null
 
 		it "should not get disconnected", (done) ->
-			disconnected = false
-			@client.on "disconnect", () ->
-				disconnected = true
 			setTimeout () =>
-				expect(disconnected).to.equal false
+				expect(@disconnected).to.equal false
 				done()
 			, 500
 			
