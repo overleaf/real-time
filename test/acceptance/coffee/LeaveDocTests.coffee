@@ -6,6 +6,8 @@ sinon = require("sinon")
 RealTimeClient = require "./helpers/RealTimeClient"
 MockDocUpdaterServer = require "./helpers/MockDocUpdaterServer"
 FixturesManager = require "./helpers/FixturesManager"
+{getClientId} = require "./helpers/SocketIoUtils"
+
 logger = require("logger-sharelatex")
 
 async = require "async"
@@ -54,7 +56,7 @@ describe "leaveDoc", ->
 					done()
 			
 			it "should have left the doc room", (done) ->
-				RealTimeClient.getConnectedClient @client.socket.sessionid, (error, client) =>
+				RealTimeClient.getConnectedClient getClientId(@client), (error, client) =>
 					expect(@doc_id in client.rooms).to.equal false
 					done()
 
@@ -71,7 +73,7 @@ describe "leaveDoc", ->
 					sinon.assert.neverCalledWith(logger.error, sinon.match.any, "not subscribed - shouldn't happen")
 
 				it "should have left the doc room", (done) ->
-					RealTimeClient.getConnectedClient @client.socket.sessionid, (error, client) =>
+					RealTimeClient.getConnectedClient getClientId(@client), (error, client) =>
 						expect(@doc_id in client.rooms).to.equal false
 						done()
 

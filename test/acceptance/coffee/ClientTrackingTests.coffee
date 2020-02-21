@@ -5,6 +5,7 @@ chai.should()
 RealTimeClient = require "./helpers/RealTimeClient"
 MockWebServer = require "./helpers/MockWebServer"
 FixturesManager = require "./helpers/FixturesManager"
+{getClientId} = require "./helpers/SocketIoUtils"
 
 async = require "async"
 
@@ -63,7 +64,7 @@ describe "clientTracking", ->
 					row: @row
 					column: @column
 					doc_id: @doc_id
-					id: @clientA.socket.sessionid
+					id: getClientId(@clientA)
 					user_id: @user_id
 					name: "Joe Bloggs"
 				}
@@ -72,7 +73,7 @@ describe "clientTracking", ->
 		it "should record the update in getConnectedUsers", (done) ->
 			@clientB.emit "clientTracking.getConnectedUsers", (error, users) =>
 				for user in users
-					if user.client_id == @clientA.socket.sessionid
+					if user.client_id == getClientId(@clientA)
 						expect(user.cursorData).to.deep.equal({
 							row: @row
 							column: @column
@@ -139,7 +140,7 @@ describe "clientTracking", ->
 					row: @row
 					column: @column
 					doc_id: @doc_id
-					id: @anonymous.socket.sessionid
+					id: getClientId(@anonymous)
 					user_id: "anonymous-user"
 					name: ""
 				}

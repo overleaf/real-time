@@ -5,6 +5,7 @@ chai.should()
 RealTimeClient = require "./helpers/RealTimeClient"
 MockWebServer = require "./helpers/MockWebServer"
 FixturesManager = require "./helpers/FixturesManager"
+{getClientId, expectClientIsConnected, expectClientIsDisconnected} = require "./helpers/SocketIoUtils"
 
 async = require "async"
 
@@ -102,7 +103,7 @@ describe "receiveUpdate", ->
 				doc_id: @doc_id
 				op:
 					meta:
-						source: @clientA.socket.sessionid
+						source: getClientId(@clientA)
 					v: @version
 					doc: @doc_id
 					op: [{i: "foo", p: 50}]				
@@ -127,7 +128,7 @@ describe "receiveUpdate", ->
 				doc_id: @doc_id_second
 				op:
 					meta:
-						source: @clientC.socket.sessionid
+						source: getClientId(@clientC)
 					v: @version
 					doc: @doc_id_second
 					op: [{i: "update from clientC", p: 50}]
@@ -159,11 +160,11 @@ describe "receiveUpdate", ->
 			@clientCErrors.should.deep.equal []
 
 		it "should disconnect the clients of the first project", ->
-			@clientA.socket.connected.should.equal false
-			@clientB.socket.connected.should.equal false
+			expectClientIsDisconnected(@clientA)
+			expectClientIsDisconnected(@clientB)
 
 		it "should not disconnect the client in the second project", ->
-			@clientC.socket.connected.should.equal true
+			expectClientIsConnected(@clientC)
 
 	describe "with an error for the second project", ->
 		beforeEach (done) ->
@@ -178,8 +179,8 @@ describe "receiveUpdate", ->
 			@clientCErrors.should.deep.equal [@error]
 
 		it "should not disconnect the clients of the first project", ->
-			@clientA.socket.connected.should.equal true
-			@clientB.socket.connected.should.equal true
+			expectClientIsConnected(@clientA)
+			expectClientIsConnected(@clientB)
 
 		it "should disconnect the client in the second project", ->
-			@clientC.socket.connected.should.equal false
+			expectClientIsDisconnected(@clientC)

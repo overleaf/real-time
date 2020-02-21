@@ -5,6 +5,7 @@ chai.should()
 
 RealTimeClient = require "./helpers/RealTimeClient"
 FixturesManager = require "./helpers/FixturesManager"
+{getClientId, expectClientIsDisconnected} = require "./helpers/SocketIoUtils"
 
 settings = require "settings-sharelatex"
 redis = require "redis-sharelatex"
@@ -55,7 +56,7 @@ describe "applyOtUpdate", ->
 				update = JSON.parse(update)
 				update.op.should.deep.equal @update.op
 				update.meta.should.deep.equal {
-					source: @client.socket.sessionid
+					source: getClientId(@client)
 					user_id: @user_id
 				}
 				done()
@@ -101,7 +102,7 @@ describe "applyOtUpdate", ->
 		
 		it "should disconnect the client", (done) ->
 			setTimeout () =>
-				@client.socket.connected.should.equal false
+				expectClientIsDisconnected(@client)
 				done()
 			, 300
 			
@@ -152,7 +153,7 @@ describe "applyOtUpdate", ->
 				update = JSON.parse(update)
 				update.op.should.deep.equal @comment_update.op
 				update.meta.should.deep.equal {
-					source: @client.socket.sessionid
+					source: getClientId(@client)
 					user_id: @user_id
 				}
 				done()
