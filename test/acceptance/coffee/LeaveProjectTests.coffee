@@ -4,6 +4,10 @@ FixturesManager = require "./helpers/FixturesManager"
 
 async = require "async"
 
+settings = require "settings-sharelatex"
+redis = require "redis-sharelatex"
+rclient = redis.createClient(settings.redis.pubsub)
+
 describe "leaveProject", ->
 	before (done) ->
 		MockDocUpdaterServer.run done
@@ -38,7 +42,16 @@ describe "leaveProject", ->
 				(cb) =>
 					@clientB.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
 						cb(error)
-							
+
+				(cb) =>
+					FixturesManager.setUpDoc @project_id, {@lines, @version, @ops}, (e, {@doc_id}) =>
+						cb(e)
+
+				(cb) =>
+					@clientA.emit "joinDoc", @doc_id, cb
+				(cb) =>
+					@clientB.emit "joinDoc", @doc_id, cb
+
 				(cb) =>
 					# leaveProject is called when the client disconnects
 					@clientA.on "disconnect", () -> cb()
@@ -65,6 +78,20 @@ describe "leaveProject", ->
 				.calledWith(@project_id)
 				.should.equal false
 
+		it "should remain subscribed to the editor-events channels", (done) ->
+			rclient.pubsub 'CHANNELS', (err, resp) =>
+				return done(err) if err
+				resp.should.include "editor-events:#{@project_id}"
+				done()
+			return null
+
+		it "should remain subscribed to the applied-ops channels", (done) ->
+			rclient.pubsub 'CHANNELS', (err, resp) =>
+				return done(err) if err
+				resp.should.include "applied-ops:#{@doc_id}"
+				done()
+			return null
+
 	describe "with no other clients in the project", ->
 		before (done) ->
 			async.series [
@@ -83,7 +110,13 @@ describe "leaveProject", ->
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
 						cb(error)
-							
+
+				(cb) =>
+					FixturesManager.setUpDoc @project_id, {@lines, @version, @ops}, (e, {@doc_id}) =>
+						cb(e)
+				(cb) =>
+					@clientA.emit "joinDoc", @doc_id, cb
+
 				(cb) =>
 					# leaveProject is called when the client disconnects
 					@clientA.on "disconnect", () -> cb()
@@ -98,3 +131,17 @@ describe "leaveProject", ->
 			MockDocUpdaterServer.deleteProject
 				.calledWith(@project_id)
 				.should.equal true
+
+		it "should not subscribe to the editor-events channels anymore", (done) ->
+			rclient.pubsub 'CHANNELS', (err, resp) =>
+				return done(err) if err
+				resp.should.not.include "editor-events:#{@project_id}"
+				done()
+			return null
+
+		it "should not subscribe to the applied-ops channels anymore", (done) ->
+			rclient.pubsub 'CHANNELS', (err, resp) =>
+				return done(err) if err
+				resp.should.not.include "applied-ops:#{@doc_id}"
+				done()
+			return null
