@@ -21,7 +21,10 @@ describe "leaveProject", ->
 					
 				(cb) =>
 					@clientA = RealTimeClient.connect()
-					@clientA.on "connectionAccepted", cb
+					@clientA.on "connectionAccepted", () =>
+						# may be cleaned up after disconnect
+						@clientA_id = @clientA.socket.sessionid
+						cb()
 					
 				(cb) =>
 					@clientB = RealTimeClient.connect()
@@ -51,12 +54,12 @@ describe "leaveProject", ->
 			], done
 
 		it "should emit a disconnect message to the room", ->
-			@clientBDisconnectMessages.should.deep.equal [@clientA.socket.sessionid]
+			@clientBDisconnectMessages.should.deep.equal [@clientA_id]
 	
 		it "should no longer list the client in connected users", (done) ->
 			@clientB.emit "clientTracking.getConnectedUsers", (error, users) =>
 				for user in users
-					if user.client_id == @clientA.socket.sessionid
+					if user.client_id == @clientA_id
 						throw "Expected clientA to not be listed in connected users"
 				return done()
 		
