@@ -30,7 +30,8 @@ module.exports = Client =
 			cookieKey = 's:' + signature.sign(sessionId, secret)
 			Client.cookie = "#{Settings.cookieName}=#{cookieKey}"
 			callback()
-			
+		return null
+
 	unsetSession: (callback = (error) ->) ->
 		Client.cookie = null
 		callback()
@@ -45,11 +46,12 @@ module.exports = Client =
 			json: true
 		}, (error, response, data) ->
 			callback error, data
-		
+		return null
+
 	getConnectedClient: (client_id, callback = (error, clients) ->) ->
 		request.get {
 			url: "http://localhost:3026/clients/#{client_id}"
 			json: true
 		}, (error, response, data) ->
 			callback error, data
-
+		return null
