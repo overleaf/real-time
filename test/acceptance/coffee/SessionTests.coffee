@@ -2,6 +2,7 @@ chai = require("chai")
 expect = chai.expect
 
 RealTimeClient = require "./helpers/RealTimeClient"
+{getClientId} = require "./helpers/SocketIoUtils"
 
 describe "Session", ->
 	describe "with an established session", ->
@@ -31,7 +32,7 @@ describe "Session", ->
 			RealTimeClient.getConnectedClients (error, clients) =>
 				included = false
 				for client in clients
-					if client.client_id == @client.socket.sessionid
+					if client.client_id == getClientId(@client)
 						included = true
 						break
 				expect(included).to.equal true

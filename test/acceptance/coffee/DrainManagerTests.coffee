@@ -1,5 +1,6 @@
 RealTimeClient = require "./helpers/RealTimeClient"
 FixturesManager = require "./helpers/FixturesManager"
+{getClientId, expectClientIsConnected} = require "./helpers/SocketIoUtils"
 
 expect = require("chai").expect
 
@@ -68,5 +69,5 @@ describe "DrainManagerTests", ->
 				expect(true).to.equal(true)
 
 			it "should not have disconnected", ->
-				expect(@clientA.socket.connected).to.equal true
-				expect(@clientB.socket.connected).to.equal true
+				expectClientIsConnected(@clientA)
+				expectClientIsConnected(@clientB)

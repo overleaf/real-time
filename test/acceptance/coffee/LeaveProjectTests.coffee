@@ -1,6 +1,7 @@
 RealTimeClient = require "./helpers/RealTimeClient"
 MockDocUpdaterServer = require "./helpers/MockDocUpdaterServer"
 FixturesManager = require "./helpers/FixturesManager"
+{getClientId} = require "./helpers/SocketIoUtils"
 
 async = require "async"
 
@@ -27,7 +28,7 @@ describe "leaveProject", ->
 					@clientA = RealTimeClient.connect()
 					@clientA.on "connectionAccepted", () =>
 						# may be cleaned up after disconnect
-						@clientA_id = @clientA.socket.sessionid
+						@clientA_id = getClientId(@clientA)
 						cb()
 					
 				(cb) =>
