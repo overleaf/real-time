@@ -4,7 +4,6 @@ settings = require "settings-sharelatex"
 WebsocketController = require "./WebsocketController"
 HttpController = require "./HttpController"
 HttpApiController = require "./HttpApiController"
-Utils = require "./Utils"
 bodyParser = require "body-parser"
 
 basicAuth = require('basic-auth-connect')
@@ -15,10 +14,9 @@ httpAuth = basicAuth (user, pass)->
 	return isValid
 
 module.exports = Router =
-	_handleError: (callback = ((error) ->), error, client, method, extraAttrs = {}) ->
-		Utils.getClientAttributes client, ["project_id", "doc_id", "user_id"], (_, attrs) ->
-			for key, value of extraAttrs
-				attrs[key] = value
+	_handleError: (callback = ((error) ->), error, client, method, attrs = {}) ->
+			for key in ["project_id", "doc_id", "user_id"]
+				attrs[key] = client.ol_context[key]
 			attrs.client_id = client.id
 			attrs.err = error
 			if error.name == "CodedError"
@@ -42,6 +40,8 @@ module.exports = Router =
 		app.post "/drain", httpAuth, HttpApiController.startDrain
 
 		session.on 'connection', (error, client, session) ->
+			client.ol_context = {}
+
 			client?.on "error", (err) ->
 				logger.err { clientErr: err }, "socket.io client error"
 				if client.connected
@@ -93,9 +93,14 @@ module.exports = Router =
 			client.on "disconnect", () ->
 				metrics.inc('socket-io.disconnect')
 				metrics.gauge('socket-io.clients', io.sockets.clients()?.length - 1)
+
+				cleanup = () ->
+					delete client.ol_context
 				WebsocketController.leaveProject io, client, (err) ->
 					if err?
-						Router._handleError null, err, client, "leaveProject"
+						Router._handleError cleanup, err, client, "leaveProject"
+					else
+						cleanup()
 
 			# Variadic. The possible arguments:
 			# doc_id, callback
