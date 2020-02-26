@@ -23,7 +23,7 @@ module.exports = HttpApiController =
 	disconnectClient: (req, res, next) ->
 		io = req.app.get("io")
 		client_id = req.params.client_id
-		client = io.sockets.sockets[client_id]
+		client = io.sockets.connected[client_id]
 
 		if !client
 			logger.info({client_id}, "api: client already disconnected")

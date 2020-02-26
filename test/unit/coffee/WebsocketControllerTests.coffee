@@ -120,11 +120,10 @@ describe 'WebsocketController', ->
 			@RoomManager.leaveProjectAndDocs = sinon.stub()
 			@clientsInRoom = []
 			@io =
-				sockets:
-					clients: (room_id) =>
-						if room_id != @project_id
-							throw "expected room_id to be project_id"
-						return @clientsInRoom
+				in: (room_id) =>
+					if room_id != @project_id
+						throw "expected room_id to be project_id"
+					{clients: (cb) => cb null, @clientsInRoom}
 			@client.ol_context.project_id = @project_id
 			@client.ol_context.user_id = @user_id
 			@WebsocketController.FLUSH_IF_EMPTY_DELAY = 0

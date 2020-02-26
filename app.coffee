@@ -23,13 +23,13 @@ CookieParser = require("cookie-parser")
 DrainManager = require("./app/js/DrainManager")
 HealthCheckManager = require("./app/js/HealthCheckManager")
 
-# work around frame handler bug in socket.io v0.9.16
-require("./socket.io.patch.js") 
 # Set up socket.io server
 app = express()
 
 server = require('http').createServer(app)
-io = require('socket.io').listen(server)
+io = require('socket.io')(server, {
+	cookie: false,
+})
 
 # Bind to sessions
 sessionStore = new RedisStore(client: sessionRedisClient)
@@ -39,20 +39,6 @@ sessionSockets = new SessionSockets(io, sessionStore, cookieParser, Settings.coo
 
 Metrics.injectMetricsRoute(app)
 app.use(Metrics.http.monitor(logger))
-
-io.configure ->
-	io.enable('browser client minification')
-	io.enable('browser client etag')
-
-	# Fix for Safari 5 error of "Error during WebSocket handshake: location mismatch"
-	# See http://answers.dotcloud.com/question/578/problem-with-websocket-over-ssl-in-safari-with
-	io.set('match origin protocol', true)
-
-	# gzip uses a Node 0.8.x method of calling the gzip program which
-	# doesn't work with 0.6.x
-	#io.enable('browser client gzip')
-	io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling'])
-	io.set('log level', 1)
 
 app.get "/", (req, res, next) ->
 	res.send "real-time-sharelatex is alive"
@@ -109,15 +95,15 @@ Error.stackTraceLimit = 10
 
 
 shutdownCleanly = (signal) ->
-	connectedClients = io.sockets.clients()?.length
-	if connectedClients == 0
-		logger.warn("no clients connected, exiting")
-		process.exit()
-	else
-		logger.warn {connectedClients}, "clients still connected, not shutting down yet"
-		setTimeout () ->
-			shutdownCleanly(signal)
-		, 30 * 1000
+	io.sockets.clients (error, connectedClients) ->
+		if connectedClients.length == 0
+			logger.warn("no clients connected, exiting")
+			process.exit()
+		else
+			logger.warn {connectedClients}, "clients still connected, not shutting down yet"
+			setTimeout () ->
+				shutdownCleanly(signal)
+			, 30 * 1000
 
 drainAndShutdown = (signal) ->
 	if Settings.shutDownInProgress

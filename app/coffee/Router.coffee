@@ -71,7 +71,7 @@ module.exports = Router =
 			client.emit("connectionAccepted")
 
 			metrics.inc('socket-io.connection')
-			metrics.gauge('socket-io.clients', io.sockets.clients()?.length)
+			metrics.gauge('socket-io.clients', Object.keys(io.sockets.connected).length)
 
 			logger.log session: session, client_id: client.id, "client connected"
 
@@ -92,9 +92,12 @@ module.exports = Router =
 						callback(null, args...)
 
 			client.on "disconnect", () ->
+				# This is called after leaving rooms.
 				metrics.inc('socket-io.disconnect')
-				metrics.gauge('socket-io.clients', io.sockets.clients()?.length - 1)
+				metrics.gauge('socket-io.clients', Object.keys(io.sockets.connected).length)
 
+			client.on "disconnecting", () ->
+				# This is called just before leaving rooms.
 				cleanup = () ->
 					delete client.ol_context
 				WebsocketController.leaveProject io, client, (err) ->

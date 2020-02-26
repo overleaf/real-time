@@ -72,13 +72,13 @@ module.exports = WebsocketController =
 
 			RoomManager.leaveProjectAndDocs(client)
 			setTimeout () ->
-				remainingClients = io.sockets.clients(project_id)
-				if remainingClients.length == 0
-					# Flush project in the background
-					DocumentUpdaterManager.flushProjectToMongoAndDelete project_id, (err) ->
-						if err?
-							logger.error {err, project_id, user_id, client_id: client.id}, "error flushing to doc updater after leaving project"
-				callback()
+				io.in(project_id).clients (error, remainingClients) ->
+					if remainingClients.length == 0
+						# Flush project in the background
+						DocumentUpdaterManager.flushProjectToMongoAndDelete project_id, (err) ->
+							if err?
+								logger.error {err, project_id, user_id, client_id: client.id}, "error flushing to doc updater after leaving project"
+					callback()
 			, WebsocketController.FLUSH_IF_EMPTY_DELAY
 
 	joinDoc: (client, doc_id, fromVersion = -1, options, callback = (error, doclines, version, ops, ranges) ->) ->
