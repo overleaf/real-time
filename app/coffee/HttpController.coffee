@@ -11,8 +11,7 @@ module.exports = HttpController =
 			{project_id, user_id, first_name, last_name, email, connected_time} = ioClient.ol_context
 			client = {client_id, project_id, user_id, first_name, last_name, email, connected_time}
 			client.rooms = []
-			for name in Object.values(ioClient.rooms)
-				continue if name == ioClient.id
+			for name in Object.values(ioClient.rooms) when name isnt ioClient.id
 				client.rooms.push name.replace(/^\//, "") # Remove leading /
 			callback(null, client)
 
