@@ -60,15 +60,14 @@ module.exports = DocumentUpdaterController =
 
 	_applyUpdateFromDocumentUpdater: (io, doc_id, update) ->
 		source = update.meta?.source
-		if io.sockets.connected.hasOwnProperty(source)
-			emitter = io.sockets.connected[source]
+		sender = io.sockets.connected[source]
+		if sender
 			logger.log {doc_id, version: update.v, source}, "distributing update to sender"
-			emitter.emit "otUpdateApplied", v: update.v, doc: update.doc
-		else
-			emitter = io
+			sender.emit "otUpdateApplied", v: update.v, doc: update.doc
+
 		return if update.dup
 		logger.log {doc_id, version: update.v, source}, "distributing updates to clients"
-		emitter.to(doc_id).emit "otUpdateApplied", update
+		(sender || io).to(doc_id).emit "otUpdateApplied", update  # does not emit to sender if defined
 
 	_processErrorFromDocumentUpdater: (io, doc_id, error, message) ->
 		io.to(doc_id).clients (err, clientIds) ->
