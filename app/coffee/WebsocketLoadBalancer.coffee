@@ -71,8 +71,7 @@ module.exports = WebsocketLoadBalancer =
 					if err?
 						return logger.err {room: message.room_id, err}, "failed to get room clients"
 					logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientIds}, "refreshing client list"
-					for clientId in clientIds
-						continue unless io.sockets.connected.hasOwnProperty(clientId)
+					for clientId in clientIds when io.sockets.connected[clientId] # filter disconnected clients
 						ConnectedUsersManager.refreshClient(message.room_id, clientId)
 			else if message.room_id?
 				if message._id? && Settings.checkEventOrder
@@ -85,9 +84,9 @@ module.exports = WebsocketLoadBalancer =
 
 					is_restricted_message = message.message not in RESTRICTED_USER_MESSAGE_TYPE_PASS_LIST
 
-					clientList = clientIds.filter(
-						(id) -> io.sockets.connected.hasOwnProperty(id)
-					).map((id) -> io.sockets.connected[id])
+					clientList = clientIds
+					.map((id) -> io.sockets.connected[id])
+					.filter(Boolean) # filter disconnected clients
 					.filter((client) ->
 						!(is_restricted_message && client.ol_context['is_restricted_user'])
 					)
