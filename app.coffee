@@ -29,6 +29,7 @@ app = express()
 server = require('http').createServer(app)
 io = require('socket.io')(server, {
 	cookie: false,
+	origins: Settings.socketIoOrigins
 })
 
 # Bind to sessions

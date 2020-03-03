@@ -49,6 +49,7 @@ settings =
 		sessionSecret: process.env['SESSION_SECRET'] or "secret-please-change"
 		
 	cookieName: process.env['COOKIE_NAME'] or "sharelatex.sid"
+	socketIoOrigins: process.env['SOCKET_IO_ORIGINS'] or '*:*'
 	
 	max_doc_length: 2 * 1024 * 1024 # 2mb
 
