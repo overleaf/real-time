@@ -59,7 +59,7 @@ module.exports = DocumentUpdaterController =
 				HealthCheckManager.check channel, message.key
 
 	_applyUpdateFromDocumentUpdater: (io, doc_id, update) ->
-		source = update.meta?.source
+		source = update.meta.source
 		sender = io.sockets.connected[source]
 		if sender
 			logger.log {doc_id, version: update.v, source}, "distributing update to sender"
