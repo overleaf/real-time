@@ -28,6 +28,7 @@ app = express()
 
 server = require('http').createServer(app)
 io = require('socket.io')(server, {
+	path: Settings.socketIoPath,
 	cookie: false,
 	origins: Settings.socketIoOrigins
 })
