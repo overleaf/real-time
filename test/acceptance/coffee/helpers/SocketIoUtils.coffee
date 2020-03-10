@@ -2,10 +2,10 @@
 
 module.exports =
 	getClientId: (client) ->
-		return client.socket.sessionid
+		return client.id
 
 	expectClientIsConnected: (client) ->
-		expect(client.socket.connected).to.equal(true)
+		expect(client.connected).to.equal(true)
 
 	expectClientIsDisconnected: (client) ->
-		expect(client.socket.connected).to.equal(false)
+		expect(client.connected).to.equal(false)

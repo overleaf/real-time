@@ -7,6 +7,7 @@ module.exports = class MockClient
 		@ol_context = {}
 		@join = sinon.stub()
 		@emit = sinon.stub()
+		@to = sinon.stub().returns({emit: @emit_to = sinon.stub()})
 		@disconnect = sinon.stub()
 		@id = idCounter++
 	disconnect: () ->

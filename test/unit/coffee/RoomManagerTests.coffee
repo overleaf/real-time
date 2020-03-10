@@ -27,7 +27,7 @@ describe 'RoomManager', ->
 			beforeEach (done) ->
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @project_id)
-					.onFirstCall().returns(0)
+					.onFirstCall().yields(0)
 				@client.join = sinon.stub()
 				@callback = sinon.stub()
 				@RoomEvents.on 'project-active', (id) =>
@@ -52,8 +52,8 @@ describe 'RoomManager', ->
 			beforeEach ->
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @project_id)
-					.onFirstCall().returns(123)
-					.onSecondCall().returns(124)
+					.onFirstCall().yields(123)
+					.onSecondCall().yields(124)
 				@client.join = sinon.stub()
 				@RoomManager.joinProject @client, @project_id
 
@@ -71,7 +71,7 @@ describe 'RoomManager', ->
 			beforeEach (done) ->
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @doc_id)
-					.onFirstCall().returns(0)
+					.onFirstCall().yields(0)
 				@client.join = sinon.stub()
 				@callback = sinon.stub()
 				@RoomEvents.on 'doc-active', (id) =>
@@ -96,8 +96,8 @@ describe 'RoomManager', ->
 			beforeEach ->
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @doc_id)
-					.onFirstCall().returns(123)
-					.onSecondCall().returns(124)
+					.onFirstCall().yields(123)
+					.onSecondCall().yields(124)
 				@client.join = sinon.stub()
 				@RoomManager.joinDoc @client, @doc_id
 
@@ -118,7 +118,7 @@ describe 'RoomManager', ->
 					.returns(true)
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @doc_id)
-					.onCall(0).returns(0)
+					.onCall(0).yields(0)
 				@client.leave = sinon.stub()
 				@RoomManager.leaveDoc @client, @doc_id
 
@@ -137,7 +137,7 @@ describe 'RoomManager', ->
 					.returns(true)
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @doc_id)
-					.onCall(0).returns(123)
+					.onCall(0).yields(123)
 				@client.leave = sinon.stub()
 				@RoomManager.leaveDoc @client, @doc_id
 
@@ -155,7 +155,7 @@ describe 'RoomManager', ->
 					.returns(false)
 				@RoomManager._clientsInRoom
 					.withArgs(@client, @doc_id)
-					.onCall(0).returns(0)
+					.onCall(0).yields(0)
 				@client.leave = sinon.stub()
 				@RoomManager.leaveDoc @client, @doc_id
 
@@ -182,16 +182,16 @@ describe 'RoomManager', ->
 					# second for the leave
 					@RoomManager._clientsInRoom
 						.withArgs(@client, @doc_id)
-						.onCall(0).returns(0)
-						.onCall(1).returns(0)
+						.onCall(0).yields(0)
+						.onCall(1).yields(0)
 					@RoomManager._clientsInRoom
 						.withArgs(@client, @other_doc_id)
-						.onCall(0).returns(0)
-						.onCall(1).returns(0)
+						.onCall(0).yields(0)
+						.onCall(1).yields(0)
 					@RoomManager._clientsInRoom
 						.withArgs(@client, @project_id)
-						.onCall(0).returns(0)
-						.onCall(1).returns(0)
+						.onCall(0).yields(0)
+						.onCall(1).yields(0)
 					@RoomManager._clientAlreadyInRoom
 						.withArgs(@client, @doc_id)
 						.returns(true)

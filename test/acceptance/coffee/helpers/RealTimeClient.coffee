@@ -1,4 +1,3 @@
-XMLHttpRequest = require("../../libs/XMLHttpRequest").XMLHttpRequest
 io = require("socket.io-client")
 async = require("async")
 
@@ -9,15 +8,6 @@ rclient = redis.createClient(Settings.redis.websessions)
 
 uid = require('uid-safe').sync
 signature = require("cookie-signature")
-
-io.util.request = () ->
-	xhr = new XMLHttpRequest()
-	_open = xhr.open
-	xhr.open = () =>
-		_open.apply(xhr, arguments)
-		if Client.cookie?
-			xhr.setRequestHeader("Cookie", Client.cookie)
-	return xhr
 
 module.exports = Client =
 	cookie: null
@@ -38,7 +28,13 @@ module.exports = Client =
 		callback()
 			
 	connect: (cookie) ->
-		client = io.connect("http://localhost:3026", 'force new connection': true)
+		client = io.connect("http://localhost:3026", {
+				forceNew: true,
+				extraHeaders: {
+					Cookie: cookie || Client.cookie,
+				}
+			}
+		)
 		return client
 		
 	getConnectedClients: (callback = (error, clients) ->) ->

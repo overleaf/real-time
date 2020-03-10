@@ -3,7 +3,7 @@ logger = require "logger-sharelatex"
 module.exports = DrainManager =
 
 	startDrainTimeWindow: (io, minsToDrain)->
-		drainPerMin = io.sockets.clients().length / minsToDrain
+		drainPerMin = Object.keys(io.sockets.connected).length / minsToDrain
 		DrainManager.startDrain(io, Math.max(drainPerMin / 60, 4)) # enforce minimum drain rate
 
 	startDrain: (io, rate) ->
@@ -26,7 +26,7 @@ module.exports = DrainManager =
 	RECONNECTED_CLIENTS: {}
 	reconnectNClients: (io, N) ->
 		drainedCount = 0
-		for client in io.sockets.clients()
+		for client in Object.values(io.sockets.connected)
 			if !@RECONNECTED_CLIENTS[client.id]
 				@RECONNECTED_CLIENTS[client.id] = true
 				logger.log {client_id: client.id}, "Asking client to reconnect gracefully"

@@ -91,14 +91,17 @@ describe "DocumentUpdaterController", ->
 		beforeEach ->
 			@sourceClient = new MockClient()
 			@otherClients = [new MockClient(), new MockClient()]
+			clients = {}
+			clients[@sourceClient.id] = @sourceClient
+			clients[@otherClients[0].id] = @otherClients[0]
+			clients[@otherClients[1].id] = @otherClients[1]
 			@update =
 				op: [ t: "foo", p: 12 ]
 				meta: source: @sourceClient.id
 				v: @version = 42
 				doc: @doc_id
-			@io.sockets =
-				clients: sinon.stub().returns([@sourceClient, @otherClients..., @sourceClient]) # include a duplicate client
-		
+			@io.sockets = {connected: clients}
+			@io.to = sinon.stub().returns(emit: @room_emit = sinon.stub())
 		describe "normally", ->
 			beforeEach ->
 				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
@@ -109,17 +112,27 @@ describe "DocumentUpdaterController", ->
 					.should.equal true
 				@sourceClient.emit.calledOnce.should.equal true
 
-			it "should get the clients connected to the document", ->
-				@io.sockets.clients
+			it "should emit from the source client to the clients connected to the document", ->
+				@sourceClient.to
 					.calledWith(@doc_id)
 					.should.equal true
-
-			it "should send the full update to the other clients", ->
-				for client in @otherClients
-					client.emit
+				@sourceClient.emit_to
 						.calledWith("otUpdateApplied", @update)
 						.should.equal true
-		
+
+		describe "from a remote client", ->
+			beforeEach ->
+				@update.meta.source = 'some-remote-client'
+				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
+
+			it "should emit to the clients connected to the document", ->
+				@io.to
+					.calledWith(@doc_id)
+					.should.equal true
+				@room_emit
+					.calledWith("otUpdateApplied", @update)
+					.should.equal true
+
 		describe "with a duplicate op", ->
 			beforeEach ->
 				@update.dup = true
@@ -131,23 +144,28 @@ describe "DocumentUpdaterController", ->
 					.should.equal true
 
 			it "should not send anything to the other clients (they've already had the op)", ->
-				for client in @otherClients
-					client.emit
+				@sourceClient.emit_to
 						.calledWith("otUpdateApplied")
 						.should.equal false
+				@room_emit
+					.calledWith("otUpdateApplied")
+					.should.equal false
 
 	describe "_processErrorFromDocumentUpdater", ->
 		beforeEach ->
 			@clients = [new MockClient(), new MockClient()]
-			@io.sockets =
-				clients: sinon.stub().returns(@clients)
+			client_mapping = {}
+			client_mapping[@clients[0].id] = @clients[0]
+			client_mapping[@clients[1].id] = @clients[1]
+			@io.sockets = {connected: client_mapping}
+			@io.to = sinon.stub().returns(clients: sinon.stub().yields(null, [@clients[0].id, @clients[1].id]))
 			@EditorUpdatesController._processErrorFromDocumentUpdater @io, @doc_id, "Something went wrong"
 
 		it "should log a warning", ->
 			@logger.warn.called.should.equal true
 
 		it "should disconnect all clients in that document", ->
-			@io.sockets.clients.calledWith(@doc_id).should.equal true
+			@io.to.calledWith(@doc_id).should.equal true
 			for client in @clients
 				client.disconnect.called.should.equal true
 

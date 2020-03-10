@@ -67,37 +67,39 @@ module.exports = WebsocketLoadBalancer =
 			if message.room_id == "all"
 				io.sockets.emit(message.message, message.payload...)
 			else if message.message is 'clientTracking.refresh' && message.room_id?
-				clientList = io.sockets.clients(message.room_id)
-				logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: (client.id for client in clientList)}, "refreshing client list"
-				for client in clientList
-					ConnectedUsersManager.refreshClient(message.room_id, client.id)
+				io.to(message.room_id).clients (err, clientIds) ->
+					if err?
+						return logger.err {room: message.room_id, err}, "failed to get room clients"
+					logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientIds}, "refreshing client list"
+					for clientId in clientIds
+						ConnectedUsersManager.refreshClient(message.room_id, clientId)
 			else if message.room_id?
 				if message._id? && Settings.checkEventOrder
 					status = EventLogger.checkEventOrder("editor-events", message._id, message)
 					if status is "duplicate"
 						return # skip duplicate events
+				io.to(message.room_id).clients (err, clientIds) ->
+					if err?
+						return logger.err {room: message.room_id, err}, "failed to get room clients"
 
-				is_restricted_message = message.message not in RESTRICTED_USER_MESSAGE_TYPE_PASS_LIST
+					is_restricted_message = message.message not in RESTRICTED_USER_MESSAGE_TYPE_PASS_LIST
 
-				# send messages only to unique clients (due to duplicate entries in io.sockets.clients)
-				clientList = io.sockets.clients(message.room_id)
-				.filter((client) ->
-					!(is_restricted_message && client.ol_context['is_restricted_user'])
-				)
+					clientList = clientIds
+					.map((id) -> io.sockets.connected[id])
+					.filter((client) ->
+						!(is_restricted_message && client.ol_context['is_restricted_user'])
+					)
 
-				# avoid unnecessary work if no clients are connected
-				return if clientList.length is 0
-				logger.log {
-					channel: channel,
-					message: message.message,
-					room_id: message.room_id,
-					message_id: message._id,
-					socketIoClients: (client.id for client in clientList)
-				}, "distributing event to clients"
-				seen = {}
-				for client in clientList
-							if !seen[client.id]
-								seen[client.id] = true
+					# avoid unnecessary work if no clients are connected
+					return if clientList.length is 0
+					logger.log {
+						channel: channel,
+						message: message.message,
+						room_id: message.room_id,
+						message_id: message._id,
+						socketIoClients: clientIds
+					}, "distributing event to clients"
+					for client in clientList
 								client.emit(message.message, message.payload...)
 			else if message.health_check?
 				logger.debug {message}, "got health check message in editor events channel"

@@ -47,7 +47,7 @@ module.exports = RoomManager =
         return RoomEvents
 
     joinEntity: (client, entity, id, callback) ->
-        beforeCount = @_clientsInRoom(client, id)
+      @_clientsInRoom client, id, (beforeCount) ->
         # client joins room immediately but joinDoc request does not complete
         # until room is subscribed
         client.join id
@@ -67,14 +67,14 @@ module.exports = RoomManager =
             callback()
 
     leaveEntity: (client, entity, id) ->
-        # Ignore any requests to leave when the client is not actually in the
-        # room. This can happen if the client sends spurious leaveDoc requests
-        # for old docs after a reconnection.
-        if !@_clientAlreadyInRoom(client, id)
-            logger.warn {client: client.id, entity, id}, "ignoring request from client to leave room it is not in"
-            return
-        client.leave id
-        afterCount = @_clientsInRoom(client, id)
+      # Ignore any requests to leave when the client is not actually in the
+      # room. This can happen if the client sends spurious leaveDoc requests
+      # for old docs after a reconnection.
+      if !@_clientAlreadyInRoom(client, id)
+          logger.warn {client: client.id, entity, id}, "ignoring request from client to leave room it is not in"
+          return
+      client.leave id
+      @_clientsInRoom client, id, (afterCount) ->
         logger.log {client: client.id, entity, id, afterCount}, "client left room"
         # is the room now empty? if so, unsubscribe
         if !entity?
@@ -86,22 +86,13 @@ module.exports = RoomManager =
             IdMap.delete(id)
             metrics.gauge "room-listeners", RoomEvents.eventNames().length
 
-    # internal functions below, these access socket.io rooms data directly and
-    # will need updating for socket.io v2
-
-    _clientsInRoom: (client, room) ->
-        nsp = client.namespace.name
-        name = (nsp + '/') + room;
-        return (client.manager?.rooms?[name] || []).length
+    _clientsInRoom: (client, room, cb) ->
+        client.server.in(room).clients (err, clients) ->
+            cb(clients?.length || 0)
 
     _roomsClientIsIn: (client) ->
-        roomList = for fullRoomPath of client.manager.roomClients?[client.id] when fullRoomPath isnt ''
-            # strip socket.io prefix from room to get original id
-            [prefix, room] = fullRoomPath.split('/', 2)
-            room
-        return roomList
+        # skip the socket id
+        return Object.keys(client.rooms).slice(1)
 
     _clientAlreadyInRoom: (client, room) ->
-        nsp = client.namespace.name
-        name = (nsp + '/') + room;
-        return client.manager.roomClients?[client.id]?[name]
+        return client.rooms.hasOwnProperty(room)

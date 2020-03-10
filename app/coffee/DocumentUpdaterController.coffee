@@ -59,30 +59,30 @@ module.exports = DocumentUpdaterController =
 				HealthCheckManager.check channel, message.key
 
 	_applyUpdateFromDocumentUpdater: (io, doc_id, update) ->
-		clientList = io.sockets.clients(doc_id)
-		# avoid unnecessary work if no clients are connected
-		if clientList.length is 0
-			return
-		# send updates to clients
-		logger.log doc_id: doc_id, version: update.v, source: update.meta?.source, socketIoClients: (client.id for client in clientList), "distributing updates to clients"
-		seen = {}
-		# send messages only to unique clients (due to duplicate entries in io.sockets.clients)
-		for client in clientList when not seen[client.id]
-			seen[client.id] = true
-			if client.id == update.meta.source
-				logger.log doc_id: doc_id, version: update.v, source: update.meta?.source, "distributing update to sender"
-				client.emit "otUpdateApplied", v: update.v, doc: update.doc
-			else if !update.dup # Duplicate ops should just be sent back to sending client for acknowledgement
-				logger.log doc_id: doc_id, version: update.v, source: update.meta?.source, client_id: client.id, "distributing update to collaborator"
-				client.emit "otUpdateApplied", update
-		if Object.keys(seen).length < clientList.length
-			metrics.inc "socket-io.duplicate-clients", 0.1
-			logger.log doc_id: doc_id, socketIoClients: (client.id for client in clientList), "discarded duplicate clients"
+		source = update.meta.source
+		sender = io.sockets.connected[source]
+		if sender
+			logger.log {doc_id, version: update.v, source}, "distributing update to sender"
+			sender.emit "otUpdateApplied", v: update.v, doc: update.doc
+
+		return if update.dup
+		logger.log {doc_id, version: update.v, source}, "distributing updates to clients"
+		# Broadcast from either the `sender`s socket or 'anonymously' from `io`.
+		# from `sender`: The sender is (still) connected by the time we receive
+		#                 the confirmation from doc-updater.
+		#                The broadcast will not emit back to the sender.
+		# from `io`: The broadcast will emit to all sockets connected to this pod
+		#             (and only to those that joined the `doc_id` room).
+		(sender || io).to(doc_id).emit "otUpdateApplied", update
 
 	_processErrorFromDocumentUpdater: (io, doc_id, error, message) ->
-		for client in io.sockets.clients(doc_id)
-			logger.warn err: error, doc_id: doc_id, client_id: client.id, "error from document updater, disconnecting client"
-			client.emit "otUpdateError", error, message
-			client.disconnect()
+		io.to(doc_id).clients (err, clientIds) ->
+			if err?
+				return logger.err {room: doc_id, err}, "failed to get room clients"
+
+			for client in clientIds.map((id) -> io.sockets.connected[id])
+				logger.warn err: error, doc_id: doc_id, client_id: client.id, "error from document updater, disconnecting client"
+				client.emit "otUpdateError", error, message
+				client.disconnect()
 
 
