@@ -32,8 +32,8 @@ describe 'EventLogger', ->
 				expect(@status).to.be.undefined
 
 			it 'should increment the valid event metric', ->
-				@metrics.inc.calledWith("event.#{@channel}.valid", 1)
-					.should.equal.true
+				@metrics.inc.calledWith("event.#{@channel}.valid", 0.001)
+					.should.equal true
 
 		describe 'when there is a duplicate events', ->
 			beforeEach ->
@@ -44,8 +44,8 @@ describe 'EventLogger', ->
 				expect(@status).to.equal "duplicate"
 
 			it 'should increment the duplicate event metric', ->
-				@metrics.inc.calledWith("event.#{@channel}.duplicate", 1)
-					.should.equal.true
+				@metrics.inc.calledWith("event.#{@channel}.duplicate")
+					.should.equal true
 
 		describe 'when there are out of order events', ->
 			beforeEach ->
@@ -57,8 +57,8 @@ describe 'EventLogger', ->
 				expect(@status).to.equal "out-of-order"
 
 			it 'should increment the out-of-order event metric', ->
-				@metrics.inc.calledWith("event.#{@channel}.out-of-order", 1)
-					.should.equal.true
+				@metrics.inc.calledWith("event.#{@channel}.out-of-order")
+					.should.equal true
 
 		describe 'after MAX_STALE_TIME_IN_MS', ->
 			it 'should flush old entries', ->

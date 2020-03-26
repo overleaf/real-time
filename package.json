@@ -39,12 +39,12 @@
   },
   "devDependencies": {
     "bunyan": "~0.22.3",
-    "chai": "~1.9.1",
+    "chai": "~4.2.0",
     "cookie-signature": "^1.1.0",
-    "sandboxed-module": "~0.3.0",
-    "sinon": "^1.5.2",
-    "mocha": "^4.0.1",
+    "sandboxed-module": "~2.0.3",
+    "sinon": "^9.0.1",
+    "mocha": "^7.1.1",
     "uid-safe": "^1.0.1",
-    "timekeeper": "0.0.4"
+    "timekeeper": "2.2.0"
   }
 }

@@ -86,8 +86,10 @@ describe 'AuthorizationManager', ->
 			it "should not allow access", () ->
 				@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
 				@callback
-					.calledWith(new Error("not authorised"))
+					.calledWith(sinon.match(Error))
 					.should.equal true
+				errorObj = this.callback.args[0][0]
+				expect(errorObj.message).to.include("not authorized")
 
 			describe "even when authorised at the doc level", ->
 				beforeEach (done) ->
@@ -96,8 +98,10 @@ describe 'AuthorizationManager', ->
 				it "should not allow access", () ->
 					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
 					@callback
-						.calledWith(new Error("not authorised"))
+						.calledWith(sinon.match(Error))
 						.should.equal true
+					errorObj = this.callback.args[0][0]
+					expect(errorObj.message).to.include("not authorized")
 
 		describe "when authorised at the project level", ->
 			beforeEach () ->
@@ -107,8 +111,10 @@ describe 'AuthorizationManager', ->
 				it "should not allow access", () ->
 					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
 					@callback
-						.calledWith(new Error("not authorised"))
+						.calledWith(sinon.match(Error))
 						.should.equal true
+					errorObj = this.callback.args[0][0]
+					expect(errorObj.message).to.include("not authorized")
 
 			describe "and authorised at the document level", ->
 				beforeEach (done) ->
@@ -128,8 +134,10 @@ describe 'AuthorizationManager', ->
 				it "should deny access", () ->
 					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
 					@callback
-						.calledWith(new Error("not authorised"))
+						.calledWith(sinon.match(Error))
 						.should.equal true
+					errorObj = this.callback.args[0][0]
+					expect(errorObj.message).to.include("not authorized")
 
 	describe "assertClientCanEditProjectAndDoc", ->
 		beforeEach () ->
@@ -144,8 +152,10 @@ describe 'AuthorizationManager', ->
 			it "should not allow access", () ->
 				@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
 				@callback
-					.calledWith(new Error("not authorised"))
+					.calledWith(sinon.match(Error))
 					.should.equal true
+				errorObj = this.callback.args[0][0]
+				expect(errorObj.message).to.include("not authorized")
 
 			describe "even when authorised at the doc level", ->
 				beforeEach (done) ->
@@ -154,8 +164,10 @@ describe 'AuthorizationManager', ->
 				it "should not allow access", () ->
 					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
 					@callback
-						.calledWith(new Error("not authorised"))
+						.calledWith(sinon.match(Error))
 						.should.equal true
+					errorObj = this.callback.args[0][0]
+					expect(errorObj.message).to.include("not authorized")
 
 		describe "when authorised at the project level", ->
 			beforeEach () ->
@@ -165,8 +177,10 @@ describe 'AuthorizationManager', ->
 				it "should not allow access", () ->
 					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
 					@callback
-						.calledWith(new Error("not authorised"))
+						.calledWith(sinon.match(Error))
 						.should.equal true
+					errorObj = this.callback.args[0][0]
+					expect(errorObj.message).to.include("not authorized")
 
 			describe "and authorised at the document level", ->
 				beforeEach (done) ->
@@ -186,5 +200,7 @@ describe 'AuthorizationManager', ->
 				it "should deny access", () ->
 					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
 					@callback
-						.calledWith(new Error("not authorised"))
+						.calledWith(sinon.match(Error))
 						.should.equal true
+					errorObj = this.callback.args[0][0]
+					expect(errorObj.message).to.include("not authorized")

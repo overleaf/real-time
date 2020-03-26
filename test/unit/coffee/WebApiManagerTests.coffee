@@ -1,6 +1,7 @@
 chai = require('chai')
 should = chai.should()
 sinon = require("sinon")
+expect = chai.expect
 modulePath = "../../../app/js/WebApiManager.js"
 SandboxedModule = require('sandboxed-module')
 { CodedError } = require('../../../app/js/Errors')
@@ -60,8 +61,10 @@ describe 'WebApiManager', ->
 
 			it "should call the callback with an error", ->
 				@callback
-					.calledWith(new Error("non-success code from web: 500"))
+					.calledWith(sinon.match(Error))
 					.should.equal true
+				errorObj = this.callback.args[0][0]
+				expect(errorObj.message).to.include("non-success status code from web: 500")
 
 		describe "with no data from web", ->
 			beforeEach ->
@@ -70,8 +73,10 @@ describe 'WebApiManager', ->
 
 			it "should call the callback with an error", ->
 				@callback
-					.calledWith(new Error("no data returned from joinProject request"))
+					.calledWith(sinon.match(Error))
 					.should.equal true
+				errorObj = this.callback.args[0][0]
+				expect(errorObj.message).to.include("no data returned from joinProject request")
 
 		describe "when the project is over its rate limit", ->
 			beforeEach ->
@@ -80,5 +85,8 @@ describe 'WebApiManager', ->
 
 			it "should call the callback with a TooManyRequests error code", ->
 				@callback
-					.calledWith(new CodedError("rate-limit hit when joining project", "TooManyRequests"))
+					.calledWith(sinon.match(CodedError))
 					.should.equal true
+				errorObj = this.callback.args[0][0]
+				expect(errorObj.message).to.include("rate-limit hit when joining project")
+				expect(errorObj.code).to.include("TooManyRequests")

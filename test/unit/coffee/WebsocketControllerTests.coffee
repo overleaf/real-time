@@ -119,8 +119,10 @@ describe 'WebsocketController', ->
 
 			it "should return an error", ->
 				@callback
-					.calledWith(new Error("not authorized"))
+					.calledWith(sinon.match(Error))
 					.should.equal true
+				errorObj = this.callback.args[0][0]
+				expect(errorObj.message).to.include("not authorized")
 
 			it "should not log an error", ->
 				@logger.error.called.should.equal false
