@@ -21,7 +21,7 @@
     "compile:smoke_tests": "[ ! -e test/smoke/coffee ] &&  echo 'No smoke tests to compile' || coffee -o test/smoke/js -c test/smoke/coffee"
   },
   "dependencies": {
-    "async": "^0.9.0",
+    "async": "^2.6.3",
     "basic-auth-connect": "^1.0.0",
     "body-parser": "^1.19.0",
     "connect-redis": "^2.1.0",
