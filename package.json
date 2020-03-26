@@ -38,13 +38,13 @@
     "socket.io-client": "^0.9.16"
   },
   "devDependencies": {
-    "bunyan": "~0.22.3",
+    "bunyan": "~1.8.12",
     "chai": "~4.2.0",
     "cookie-signature": "^1.1.0",
     "sandboxed-module": "~2.0.3",
     "sinon": "^9.0.1",
     "mocha": "^7.1.1",
-    "uid-safe": "^1.0.1",
+    "uid-safe": "^2.1.5",
     "timekeeper": "2.2.0"
   }
 }
