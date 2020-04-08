@@ -653,8 +653,8 @@ describe 'WebsocketController', ->
 			beforeEach (done) ->
 				@client.disconnect = sinon.stub()
 				@client.emit = sinon.stub()
-				@client.params.user_id = @user_id
-				@client.params.project_id = @project_id
+				@client.ol_context.user_id = @user_id
+				@client.ol_context.project_id = @project_id
 				error = new Error("update is too large")
 				error.updateSize = 7372835
 				@DocumentUpdaterManager.queueChange = sinon.stub().callsArgWith(3, error)
