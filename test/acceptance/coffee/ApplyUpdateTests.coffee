@@ -115,7 +115,7 @@ describe "applyOtUpdate", ->
 
 		it "should disconnect the client", (done) ->
 			setTimeout () =>
-				@client.socket.connected.should.equal false
+				expectClientIsDisconnected(@client)
 				done()
 			, 300
 
