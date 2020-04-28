@@ -1,4 +1,5 @@
 chai = require('chai')
+expect = chai.expect
 should = chai.should()
 sinon = require("sinon")
 modulePath = "../../../app/js/RoomManager.js"
@@ -19,9 +20,9 @@ describe 'RoomManager', ->
 		@RoomEvents = @RoomManager.eventSource()
 		sinon.spy(@RoomEvents, 'emit')
 		sinon.spy(@RoomEvents, 'once')
-	
+
 	describe "joinProject", ->
-	
+
 		describe "when the project room is empty", ->
 
 			beforeEach (done) ->
@@ -262,3 +263,62 @@ describe 'RoomManager', ->
 
 				it "should not emit any events", ->
 					@RoomEvents.emit.called.should.equal false
+
+	describe "getClientsInRoomSync", ->
+		beforeEach ->
+			@io = {
+				sockets: {
+					adapter: {
+						rooms: {},
+						nsp: {
+							connected: {}
+						}
+					}
+				}
+			}
+			@room = "some-project-id"
+
+		describe "when the room does not exist", ->
+			it "should return an empty array", ->
+				expect(@RoomManager.getClientsInRoomSync(@io, @room)).to.deep.equal([])
+
+		describe "when the room exists", ->
+			beforeEach ->
+				@io.sockets.adapter.rooms[@room] = {sockets: {}}
+
+			describe "when nobody is in the room", ->
+				it "should return an empty array", ->
+					expect(@RoomManager.getClientsInRoomSync(@io, @room))
+						.to.deep.equal([])
+
+
+			describe "when a client is in the room", ->
+				beforeEach ->
+					@clientId = 'some-client-id'
+					@io.sockets.adapter.rooms[@room].sockets[@clientId] = true
+
+				describe "when the client is not connected", ->
+					it "should return an empty array", ->
+						expect(@RoomManager.getClientsInRoomSync(@io, @room))
+							.to.deep.equal([])
+
+				describe "when the client is connected", ->
+					beforeEach ->
+						@io.sockets.adapter.nsp.connected[@clientId] = { mock: 'client' }
+
+					it "should return a list with the clientId", ->
+						expect(@RoomManager.getClientsInRoomSync(@io, @room))
+							.to.deep.equal([@clientId])
+
+			describe "when two clients are in the room and are connected", ->
+				beforeEach ->
+					@clientId = 'some-client-id'
+					@io.sockets.adapter.rooms[@room].sockets[@clientId] = true
+					@clientId2 = 'some-client-id-2'
+					@io.sockets.adapter.rooms[@room].sockets[@clientId2] = true
+					@io.sockets.adapter.nsp.connected[@clientId] = { mock: 'client1' }
+					@io.sockets.adapter.nsp.connected[@clientId2] = { mock: 'client1' }
+
+				it "should return a list with the two clientIds", ->
+					expect(@RoomManager.getClientsInRoomSync(@io, @room))
+						.to.deep.equal([@clientId, @clientId2])
