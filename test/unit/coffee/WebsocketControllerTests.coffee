@@ -119,11 +119,7 @@ describe 'WebsocketController', ->
 			@WebsocketLoadBalancer.emitToRoom = sinon.stub()
 			@RoomManager.leaveProjectAndDocs = sinon.stub()
 			@clientsInRoom = []
-			@io =
-				in: (room_id) =>
-					if room_id != @project_id
-						throw "expected room_id to be project_id"
-					{clients: (cb) => cb null, @clientsInRoom}
+			@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(null, @clientsInRoom)
 			@client.ol_context.project_id = @project_id
 			@client.ol_context.user_id = @user_id
 			@WebsocketController.FLUSH_IF_EMPTY_DELAY = 0
@@ -131,7 +127,6 @@ describe 'WebsocketController', ->
 
 		describe "when the project is empty", ->
 			beforeEach (done) ->
-				@clientsInRoom = []
 				@WebsocketController.leaveProject @io, @client, done
 
 			it "should end clientTracking.clientDisconnected to the project room", ->
@@ -159,7 +154,7 @@ describe 'WebsocketController', ->
 
 		describe "when the project is not empty", ->
 			beforeEach ->
-				@clientsInRoom = ["mock-remaining-client"]
+				@clientsInRoom.push("mock-remaining-client")
 				@WebsocketController.leaveProject @io, @client
 
 			it "should not flush the project in the document updater", ->

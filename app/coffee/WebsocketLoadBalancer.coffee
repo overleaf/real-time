@@ -67,7 +67,7 @@ module.exports = WebsocketLoadBalancer =
 			if message.room_id == "all"
 				io.sockets.emit(message.message, message.payload...)
 			else if message.message is 'clientTracking.refresh' && message.room_id?
-				io.to(message.room_id).clients (err, clientIds) ->
+				RoomManager.getClientsInRoomPseudoAsync io, message.room_id, (err, clientIds) ->
 					if err?
 						return logger.err {room: message.room_id, err}, "failed to get room clients"
 					logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientIds}, "refreshing client list"
@@ -78,7 +78,7 @@ module.exports = WebsocketLoadBalancer =
 					status = EventLogger.checkEventOrder("editor-events", message._id, message)
 					if status is "duplicate"
 						return # skip duplicate events
-				io.to(message.room_id).clients (err, clientIds) ->
+				RoomManager.getClientsInRoomPseudoAsync io, message.room_id, (err, clientIds) ->
 					if err?
 						return logger.err {room: message.room_id, err}, "failed to get room clients"
 
