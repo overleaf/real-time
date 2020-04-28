@@ -15,11 +15,18 @@ module.exports = WebsocketController =
 	PROTOCOL_VERSION: 2
 
 	joinProject: (client, user, project_id, callback = (error, project, privilegeLevel, protocolVersion) ->) ->
+		if not client.connected
+			metrics.inc('disconnected_join_project')
+			return callback()
+
 		user_id = user?._id
 		logger.log {user_id, project_id, client_id: client.id}, "user joining project"
 		metrics.inc "editor.join-project"
 		WebApiManager.joinProject project_id, user, (error, project, privilegeLevel, isRestrictedUser) ->
 			return callback(error) if error?
+			if not client.connected
+				metrics.inc('disconnected_join_project')
+				return callback()
 
 			if !privilegeLevel or privilegeLevel == ""
 				err = new Error("not authorized")
@@ -76,6 +83,10 @@ module.exports = WebsocketController =
 			, WebsocketController.FLUSH_IF_EMPTY_DELAY
 
 	joinDoc: (client, doc_id, fromVersion = -1, options, callback = (error, doclines, version, ops, ranges) ->) ->
+			if not client.connected
+				metrics.inc('disconnected_join_doc')
+				return callback()
+
 			metrics.inc "editor.join-doc"
 			{project_id, user_id, is_restricted_user} = client.ol_context
 			return callback(new Error("no project_id found on client")) if !project_id?
@@ -87,8 +98,17 @@ module.exports = WebsocketController =
 				# doc to the client, so that no events are missed.
 				RoomManager.joinDoc client, doc_id, (error) ->
 					return callback(error) if error?
+					if not client.connected
+						metrics.inc('disconnected_join_doc')
+						# the client will not read the response anyways
+						return callback()
+
 					DocumentUpdaterManager.getDocument project_id, doc_id, fromVersion, (error, lines, version, ranges, ops) ->
 						return callback(error) if error?
+						if not client.connected
+							metrics.inc('disconnected_join_doc')
+							# the client will not read the response anyways
+							return callback()
 
 						if is_restricted_user and ranges?.comments?
 							ranges.comments = []
@@ -120,6 +140,7 @@ module.exports = WebsocketController =
 						callback null, escapedLines, version, ops, ranges
 
 	leaveDoc: (client, doc_id, callback = (error) ->) ->
+			# client may have disconnected, but we have to cleanup internal state.
 			metrics.inc "editor.leave-doc"
 			{project_id, user_id} = client.ol_context
 			logger.log {user_id, project_id, doc_id, client_id: client.id}, "client leaving doc"
@@ -130,6 +151,10 @@ module.exports = WebsocketController =
 			## AuthorizationManager.removeAccessToDoc client, doc_id
 			callback()
 	updateClientPosition: (client, cursorData, callback = (error) ->) ->
+			if not client.connected
+				# do not create a ghost entry in redis
+				return callback()
+
 			metrics.inc "editor.update-client-position", 0.1
 			{project_id, first_name, last_name, email, user_id} = client.ol_context
 			logger.log {user_id, project_id, client_id: client.id, cursorData: cursorData}, "updating client position"
@@ -168,6 +193,10 @@ module.exports = WebsocketController =
 
 	CLIENT_REFRESH_DELAY: 1000
 	getConnectedUsers: (client, callback = (error, users) ->) ->
+			if not client.connected
+				# they are not interested anymore, skip the redis lookups
+				return callback()
+
 			metrics.inc "editor.get-connected-users"
 			{project_id, user_id, is_restricted_user} = client.ol_context
 			if is_restricted_user
@@ -185,6 +214,7 @@ module.exports = WebsocketController =
 				, WebsocketController.CLIENT_REFRESH_DELAY
 
 	applyOtUpdate: (client, doc_id, update, callback = (error) ->) ->
+			# client may have disconnected, but we can submit their update to doc-updater anyways.
 			{user_id, project_id} = client.ol_context
 			return callback(new Error("no project_id found on client")) if !project_id?
 
@@ -215,6 +245,9 @@ module.exports = WebsocketController =
 						# trigger an out-of-sync error
 						message = {project_id, doc_id, error: "update is too large"}
 						setTimeout () ->
+							if not client.connected
+								# skip the message broadcast, the client has moved on
+								return metrics.inc('disconnected_otUpdateError')
 							client.emit "otUpdateError", message.error, message
 							client.disconnect()
 						, 100
