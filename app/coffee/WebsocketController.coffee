@@ -74,7 +74,7 @@ module.exports = WebsocketController =
 
 			RoomManager.leaveProjectAndDocs(client)
 			setTimeout () ->
-				io.in(project_id).clients (error, remainingClients) ->
+				RoomManager.getClientsInRoomPseudoAsync io, project_id, (error, remainingClients) ->
 					if remainingClients.length == 0
 						# Flush project in the background
 						DocumentUpdaterManager.flushProjectToMongoAndDelete project_id, (err) ->

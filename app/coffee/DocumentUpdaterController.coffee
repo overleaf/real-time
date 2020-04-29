@@ -76,11 +76,11 @@ module.exports = DocumentUpdaterController =
 		(sender || io).to(doc_id).emit "otUpdateApplied", update
 
 	_processErrorFromDocumentUpdater: (io, doc_id, error, message) ->
-		io.to(doc_id).clients (err, clientIds) ->
+		RoomManager.getClientsInRoomPseudoAsync io, doc_id, (err, clientIds) ->
 			if err?
 				return logger.err {room: doc_id, err}, "failed to get room clients"
 
-			for client in clientIds.map((id) -> io.sockets.connected[id]) when client # filter disconnected clients
+			for client in clientIds.map((id) -> io.sockets.connected[id])
 				logger.warn err: error, doc_id: doc_id, client_id: client.id, "error from document updater, disconnecting client"
 				client.emit "otUpdateError", error, message
 				client.disconnect()

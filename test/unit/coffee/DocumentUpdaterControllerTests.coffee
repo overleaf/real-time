@@ -41,7 +41,7 @@ describe "DocumentUpdaterController", ->
 			@rclient[1].subscribe = sinon.stub()
 			@rclient[1].on = sinon.stub()
 			@EditorUpdatesController.listenForUpdatesFromDocumentUpdater()
-		
+
 		it "should subscribe to the doc-updater stream", ->
 			@rclient[0].subscribe.calledWith("applied-ops").should.equal true
 
@@ -57,7 +57,7 @@ describe "DocumentUpdaterController", ->
 			beforeEach ->
 				@SafeJsonParse.parse = sinon.stub().callsArgWith 1, new Error("oops")
 				@EditorUpdatesController._processMessageFromDocumentUpdater @io, "applied-ops", "blah"
-			
+
 			it "should log an error", ->
 				@logger.error.called.should.equal true
 
@@ -137,7 +137,7 @@ describe "DocumentUpdaterController", ->
 			beforeEach ->
 				@update.dup = true
 				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
-			
+
 			it "should send a version bump to the source client as usual", ->
 				@sourceClient.emit
 					.calledWith("otUpdateApplied", v: @version, doc: @doc_id)
@@ -158,14 +158,16 @@ describe "DocumentUpdaterController", ->
 			client_mapping[@clients[0].id] = @clients[0]
 			client_mapping[@clients[1].id] = @clients[1]
 			@io.sockets = {connected: client_mapping}
-			@io.to = sinon.stub().returns(clients: sinon.stub().yields(null, [@clients[0].id, @clients[1].id]))
+			@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(null, [@clients[0].id, @clients[1].id])
 			@EditorUpdatesController._processErrorFromDocumentUpdater @io, @doc_id, "Something went wrong"
 
 		it "should log a warning", ->
 			@logger.warn.called.should.equal true
 
 		it "should disconnect all clients in that document", ->
-			@io.to.calledWith(@doc_id).should.equal true
+			@RoomManager.getClientsInRoomPseudoAsync
+				.calledWith(@io, @doc_id)
+				.should.equal true
 			for client in @clients
 				client.disconnect.called.should.equal true
 

@@ -83,8 +83,8 @@ describe "WebsocketLoadBalancer", ->
 					'client-id-1': {id: 'client-id-1', emit: @emit1 = sinon.stub(), ol_context: {}}
 					'client-id-2': {id: 'client-id-2', emit: @emit2 = sinon.stub(), ol_context: {}}
 				}
-				@io.to = sinon.stub().returns(
-					clients: sinon.stub().yields(null, ['client-id-1', 'client-id-2'])
+				@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(
+					null, ['client-id-1', 'client-id-2']
 				)
 				data = JSON.stringify
 					room_id: @room_id
@@ -93,8 +93,8 @@ describe "WebsocketLoadBalancer", ->
 				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
 
 			it "should send the message to all (unique) clients in the room", ->
-				@io.to
-					.calledWith(@room_id)
+				@RoomManager.getClientsInRoomPseudoAsync
+					.calledWith(@io, @room_id)
 					.should.equal true
 				@emit1.calledWith(@message, @payload...).should.equal true
 				@emit2.calledWith(@message, @payload...).should.equal true
@@ -106,8 +106,8 @@ describe "WebsocketLoadBalancer", ->
 					'client-id-2': {id: 'client-id-2', emit: @emit2 = sinon.stub(), ol_context: {}}
 					'client-id-4': {id: 'client-id-4', emit: @emit4 = sinon.stub(), ol_context: {is_restricted_user: true}}
 				}
-				@io.to = sinon.stub().returns(
-					clients: sinon.stub().yields(null, ['client-id-1', 'client-id-2', 'client-id-4'])
+				@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(
+					null, ['client-id-1', 'client-id-2', 'client-id-4']
 				)
 				data = JSON.stringify
 					room_id: @room_id
@@ -116,8 +116,8 @@ describe "WebsocketLoadBalancer", ->
 				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
 
 			it "should send the message to all (unique) clients in the room", ->
-				@io.to
-					.calledWith(@room_id)
+				@RoomManager.getClientsInRoomPseudoAsync
+					.calledWith(@io, @room_id)
 					.should.equal true
 				@emit1.calledWith(@message, @payload...).should.equal true
 				@emit2.calledWith(@message, @payload...).should.equal true
@@ -130,8 +130,8 @@ describe "WebsocketLoadBalancer", ->
 					'client-id-2': {id: 'client-id-2', emit: @emit2 = sinon.stub(), ol_context: {}}
 					'client-id-4': {id: 'client-id-4', emit: @emit4 = sinon.stub(), ol_context: {is_restricted_user: true}}
 				}
-				@io.to = sinon.stub().returns(
-					clients: sinon.stub().yields(null, ['client-id-1', 'client-id-2', 'client-id-4'])
+				@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(
+					null, ['client-id-1', 'client-id-2', 'client-id-4']
 				)
 				data = JSON.stringify
 					room_id: @room_id
@@ -140,8 +140,8 @@ describe "WebsocketLoadBalancer", ->
 				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
 
 			it "should send the message to all (unique) clients in the room, who are not restricted", ->
-				@io.to
-					.calledWith(@room_id)
+				@RoomManager.getClientsInRoomPseudoAsync
+					.calledWith(@io, @room_id)
 					.should.equal true
 				@emit1.calledWith(@restrictedMessage, @payload...).should.equal true
 				@emit2.calledWith(@restrictedMessage, @payload...).should.equal true

@@ -67,18 +67,18 @@ module.exports = WebsocketLoadBalancer =
 			if message.room_id == "all"
 				io.sockets.emit(message.message, message.payload...)
 			else if message.message is 'clientTracking.refresh' && message.room_id?
-				io.to(message.room_id).clients (err, clientIds) ->
+				RoomManager.getClientsInRoomPseudoAsync io, message.room_id, (err, clientIds) ->
 					if err?
 						return logger.err {room: message.room_id, err}, "failed to get room clients"
 					logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientIds}, "refreshing client list"
-					for clientId in clientIds when io.sockets.connected[clientId] # filter disconnected clients
+					for clientId in clientIds
 						ConnectedUsersManager.refreshClient(message.room_id, clientId)
 			else if message.room_id?
 				if message._id? && Settings.checkEventOrder
 					status = EventLogger.checkEventOrder("editor-events", message._id, message)
 					if status is "duplicate"
 						return # skip duplicate events
-				io.to(message.room_id).clients (err, clientIds) ->
+				RoomManager.getClientsInRoomPseudoAsync io, message.room_id, (err, clientIds) ->
 					if err?
 						return logger.err {room: message.room_id, err}, "failed to get room clients"
 
@@ -86,7 +86,6 @@ module.exports = WebsocketLoadBalancer =
 
 					clientList = clientIds
 					.map((id) -> io.sockets.connected[id])
-					.filter(Boolean) # filter disconnected clients
 					.filter((client) ->
 						!(is_restricted_message && client.ol_context['is_restricted_user'])
 					)

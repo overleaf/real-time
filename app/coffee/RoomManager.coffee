@@ -87,8 +87,7 @@ module.exports = RoomManager =
             metrics.gauge "room-listeners", RoomEvents.eventNames().length
 
     _clientsInRoom: (client, room, cb) ->
-        client.server.in(room).clients (err, clients) ->
-            cb(clients?.length || 0)
+        cb(@getClientsInRoomSync(client.server, room).length)
 
     _roomsClientIsIn: (client) ->
         # skip the socket id
@@ -96,3 +95,21 @@ module.exports = RoomManager =
 
     _clientAlreadyInRoom: (client, room) ->
         return client.rooms.hasOwnProperty(room)
+
+    getClientsInRoomSync: (io, room) ->
+        # the implementation in socket.io-adapter is prone to race conditions:
+        # it passes the list of clients via process.nextTick, but given that
+        # NodeJS can process multiple network events in the same event loop
+        # cycle, multiple clients may seem to be the last in a room, but
+        # actually there are not -- some other client joined in the mean time.
+        # (mean time: calculating the list of clients and us receiving it)
+        adapter = io.sockets.adapter
+        return [] unless adapter.rooms.hasOwnProperty(room)
+        return Object.keys(adapter.rooms[room].sockets).filter((id) ->
+          return adapter.nsp.connected[id]
+        )
+
+    # HACK: it calls the callback synchronously -- hence the name pseudoAsync
+    # calling it asynchronously would lead to race conditions -- see above
+    getClientsInRoomPseudoAsync: (io, room, cb) ->
+        cb(null, RoomManager.getClientsInRoomSync(io, room))
