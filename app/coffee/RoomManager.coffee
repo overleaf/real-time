@@ -122,7 +122,5 @@ module.exports = RoomManager =
         #  cycle. We would not pick up the room (we just joined) for leaving.
         roomRegistry = client.server.sockets.adapter.sids
         return [] unless roomRegistry.hasOwnProperty(client.id)
-        rooms = Object.keys(roomRegistry[client.id])
-        # skip the socket id
-        rooms.splice(rooms.indexOf(client.id), 1)
+        rooms = (room for room in Object.keys(roomRegistry[client.id]) when room isnt client.id)  # exclude the client socket entry
         return rooms
