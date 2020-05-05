@@ -30,7 +30,10 @@ server = require('http').createServer(app)
 io = require('socket.io')(server, {
 	path: Settings.socketIoPath,
 	cookie: false,
-	origins: Settings.socketIoOrigins
+	origins: Settings.socketIoOrigins,
+
+	# restore v0 default
+	pingTimeout: 60 * 1000,
 })
 
 # Bind to sessions
