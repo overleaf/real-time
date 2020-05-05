@@ -31,6 +31,10 @@ module.exports = ChannelManager =
             clientChannelMap.set(channel, subscribePromise)
             logger.log {channel}, "subscribed to new channel"
             metrics.inc "subscribe.#{baseChannel}"
+            subscribePromise.catch () ->
+                metrics.inc "subscribe.failed.#{baseChannel}"
+                # clear state
+                clientChannelMap.delete(channel)
             return subscribePromise
 
     unsubscribe: (rclient, baseChannel, id) ->
