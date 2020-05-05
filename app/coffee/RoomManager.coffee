@@ -90,11 +90,10 @@ module.exports = RoomManager =
         cb(@getClientsInRoomSync(client.server, room).length)
 
     _roomsClientIsIn: (client) ->
-        # skip the socket id
-        return Object.keys(client.rooms).slice(1)
+        return @getRoomsClientIsInSync(client)
 
     _clientAlreadyInRoom: (client, room) ->
-        return client.rooms.hasOwnProperty(room)
+        return @getRoomsClientIsInSync(client).indexOf(room) != -1
 
     getClientsInRoomSync: (io, room) ->
         # the implementation in socket.io-adapter is prone to race conditions:
@@ -113,3 +112,15 @@ module.exports = RoomManager =
     # calling it asynchronously would lead to race conditions -- see above
     getClientsInRoomPseudoAsync: (io, room, cb) ->
         cb(null, RoomManager.getClientsInRoomSync(io, room))
+
+    getRoomsClientIsInSync: (client) ->
+        # The implementation in socket.io is prone to race conditions:
+        # The adapter will get updated immediately from joining, but the
+        #  client local state (.rooms) is updated via process.nextTick.
+        # Given that NodeJS can process multiple network events in the same
+        #  event loop cycle, we can join a project and disconnect in the same
+        #  cycle. We would not pick up the room (we just joined) for leaving.
+        roomRegistry = client.server.sockets.adapter.sids
+        return [] unless roomRegistry.hasOwnProperty(client.id)
+        rooms = (room for room in Object.keys(roomRegistry[client.id]) when room isnt client.id)  # exclude the client socket entry
+        return rooms

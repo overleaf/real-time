@@ -1,2 +1,3 @@
 [app/coffee/RoomManager.coffee]
 indent_style = space
+indent_size = 4
