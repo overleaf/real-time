@@ -34,7 +34,6 @@ describe 'ChannelManager', ->
 				@rclient.subscribe.called.should.equal false
 
 		describe "when subscribe errors", ->
-			# TODO(das7pad): rework after decaff -- our coffee-script version does not like async/await
 			beforeEach (done) ->
 				@rclient.subscribe = () ->
 					return new Promise (resolve, reject) ->
@@ -43,7 +42,7 @@ describe 'ChannelManager', ->
 				@rclient.subscribe = sinon.stub().resolves()
 				p.then () ->
 					done(new Error('should not subscribe but fail'))
-				p.catch (err) =>
+				.catch (err) =>
 					err.message.should.equal "some redis error"
 					@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal false
 					@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
