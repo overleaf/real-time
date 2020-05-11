@@ -53,6 +53,29 @@ describe 'ChannelManager', ->
 				@rclient.subscribe.called.should.equal true
 				@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal true
 
+		describe "when subscribe errors and the clientChannelMap entry was replaced", ->
+			beforeEach (done) ->
+				@rclient.subscribe = () ->
+					return new Promise (resolve, reject) ->
+						setTimeout((() -> reject(new Error("some redis error"))), 3)
+				@first = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				# ignore error
+				@first.catch((()->))
+				@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef").should.equal @first
+
+				@rclient.unsubscribe = sinon.stub().resolves()
+				@rclient.subscribe = sinon.stub().resolves()
+				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+				@second = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				# replaced immediately
+				@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef").should.equal @second
+
+				# let the first subscribe error -> unsubscribe -> subscribe
+				setTimeout done, 10
+
+			it "should not cleanup the second subscribePromise", ->
+				@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef").should.equal @second
+
 		describe "when there is an existing subscription for another redis client but not this one", ->
 			beforeEach ->
 				@other_rclient.subscribe = sinon.stub().resolves()

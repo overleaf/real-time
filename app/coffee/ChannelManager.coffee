@@ -33,8 +33,10 @@ module.exports = ChannelManager =
             metrics.inc "subscribe.#{baseChannel}"
             subscribePromise.catch () ->
                 metrics.inc "subscribe.failed.#{baseChannel}"
-                # clear state
-                clientChannelMap.delete(channel)
+                # clear state on error, following subscribes should retry
+                # new subscribe requests can overtake, skip cleanup then
+                if clientChannelMap.get(channel) is subscribePromise
+                    clientChannelMap.delete(channel)
             return subscribePromise
 
     unsubscribe: (rclient, baseChannel, id) ->
