@@ -17,72 +17,73 @@ describe 'ChannelManager', ->
 	describe "subscribe", ->
 
 		describe "when there is no existing subscription for this redis client", ->
-			beforeEach ->
+			beforeEach (done) ->
 				@rclient.subscribe = sinon.stub().resolves()
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				setTimeout done
 
 			it "should subscribe to the redis channel", ->
 				@rclient.subscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal true
 
 		describe "when there is an existing subscription for this redis client", ->
-			beforeEach ->
+			beforeEach (done) ->
 				@rclient.subscribe = sinon.stub().resolves()
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub().resolves()  # discard the original stub
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				setTimeout done
 
 			it "should not subscribe to the redis channel", ->
-				@rclient.subscribe.called.should.equal false
+				@rclient.subscribe.callCount.should.equal 1
 
 		describe "when subscribe errors", ->
 			beforeEach (done) ->
-				@rclient.subscribe = () ->
-					return new Promise (resolve, reject) ->
-						setTimeout((() -> reject(new Error("some redis error"))), 1)
+				@rclient.subscribe = sinon.stub()
+					.onFirstCall().rejects(new Error("some redis error"))
+					.onSecondCall().resolves()
 				p = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub().resolves()
 				p.then () ->
 					done(new Error('should not subscribe but fail'))
 				.catch (err) =>
 					err.message.should.equal "some redis error"
 					@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal false
 					@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-					done()
+					# subscribe is wrapped in Promise, delay other assertions
+					setTimeout done
 				return null
 
 			it "should subscribe again", ->
-				@rclient.subscribe.called.should.equal true
+				@rclient.subscribe.callCount.should.equal 2
 				@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal true
 
 		describe "when subscribe errors and the clientChannelMap entry was replaced", ->
 			beforeEach (done) ->
-				@rclient.subscribe = () ->
-					return new Promise (resolve, reject) ->
-						setTimeout((() -> reject(new Error("some redis error"))), 3)
+				@rclient.subscribe = sinon.stub()
+					.onFirstCall().rejects(new Error("some redis error"))
+					.onSecondCall().resolves()
 				@first = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
 				# ignore error
 				@first.catch((()->))
-				@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef").should.equal @first
+				expect(@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef")).to.equal @first
 
 				@rclient.unsubscribe = sinon.stub().resolves()
-				@rclient.subscribe = sinon.stub().resolves()
 				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
 				@second = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				# replaced immediately
-				@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef").should.equal @second
+				# should get replaced immediately
+				expect(@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef")).to.equal @second
 
 				# let the first subscribe error -> unsubscribe -> subscribe
-				setTimeout done, 10
+				setTimeout done
 
 			it "should not cleanup the second subscribePromise", ->
-				@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef").should.equal @second
+				expect(@ChannelManager.getClientMapEntry(@rclient).get("applied-ops:1234567890abcdef")).to.equal @second
 
 		describe "when there is an existing subscription for another redis client but not this one", ->
-			beforeEach ->
+			beforeEach (done) ->
 				@other_rclient.subscribe = sinon.stub().resolves()
 				@ChannelManager.subscribe @other_rclient, "applied-ops", "1234567890abcdef"
 				@rclient.subscribe = sinon.stub().resolves()  # discard the original stub
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				setTimeout done
 
 			it "should subscribe to the redis channel on this redis client", ->
 				@rclient.subscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal true
@@ -90,23 +91,73 @@ describe 'ChannelManager', ->
 	describe "unsubscribe", ->
 
 		describe "when there is no existing subscription for this redis client", ->
-			beforeEach ->
+			beforeEach (done) ->
 				@rclient.unsubscribe = sinon.stub()
 				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+				setTimeout done
 
 			it "should not unsubscribe from the redis channel", ->
 				@rclient.unsubscribe.called.should.equal false
 
 
 		describe "when there is an existing subscription for this another redis client but not this one", ->
-			beforeEach ->
+			beforeEach (done) ->
 				@other_rclient.subscribe = sinon.stub().resolves()
 				@rclient.unsubscribe = sinon.stub()
 				@ChannelManager.subscribe @other_rclient, "applied-ops", "1234567890abcdef"
 				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+				setTimeout done
 
 			it "should not unsubscribe from the redis channel on this client", ->
 				@rclient.unsubscribe.called.should.equal false
+
+		describe "when unsubscribe errors and completes", ->
+			beforeEach (done) ->
+				@rclient.subscribe = sinon.stub().resolves()
+				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				@rclient.unsubscribe = sinon.stub().rejects(new Error("some redis error"))
+				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+				setTimeout done
+				return null
+
+			it "should have cleaned up", ->
+				@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal false
+
+			it "should not error out when subscribing again", (done) ->
+				p = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				p.then () ->
+					done()
+				.catch done
+				return null
+
+		describe "when unsubscribe errors and another client subscribes at the same time", ->
+			beforeEach (done) ->
+				@rclient.subscribe = sinon.stub().resolves()
+				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
+				rejectSubscribe = undefined
+				@rclient.unsubscribe = () ->
+					return new Promise (resolve, reject) ->
+						rejectSubscribe = reject
+				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
+
+				setTimeout () =>
+					# delay, actualUnsubscribe should not see the new subscribe request
+					# (otherwise it will skip the unsubscribe call as an optimization)
+					@ChannelManager.subscribe(@rclient, "applied-ops", "1234567890abcdef")
+					.then () ->
+						setTimeout done
+					.catch done
+					setTimeout ->
+						# delay, rejectSubscribe is not defined immediately
+						rejectSubscribe(new Error("redis error"))
+				return null
+
+			it "should have errored", ->
+				expect(@metrics.inc.calledWithExactly("unsubscribe.failed.applied-ops")).to.equal(true)
+
+			it "should have subscribed and stored the success", ->
+				@rclient.subscribe.called.should.equal true
+				@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal true
 
 		describe "when there is an existing subscription for this redis client", ->
 			beforeEach (done) ->
@@ -114,7 +165,7 @@ describe 'ChannelManager', ->
 				@rclient.unsubscribe = sinon.stub().resolves()
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
 				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
-				setTimeout done, 3
+				setTimeout done
 
 			it "should unsubscribe from the redis channel", ->
 				@rclient.unsubscribe.calledWithExactly("applied-ops:1234567890abcdef").should.equal true
@@ -234,7 +285,7 @@ describe 'ChannelManager', ->
 					beforeEach (done) ->
 						setTimeout () =>
 							@redisSubscribePromises[0].resolve()
-							setTimeout done, 3
+							setTimeout done
 						, 3
 						return null # ... no implicit return
 
@@ -263,7 +314,7 @@ describe 'ChannelManager', ->
 						beforeEach (done) ->
 							setTimeout () =>
 								@redisSubscribePromises[0].resolve()
-								setTimeout done, 3
+								setTimeout done
 							, 3
 							return null # ... no implicit return
 
@@ -279,8 +330,7 @@ describe 'ChannelManager', ->
 							beforeEach (done) ->
 								setTimeout () =>
 									@redisSubscribePromises[1].resolve()
-									setTimeout done, 3
-								, 3
+									setTimeout done
 								return null # ... no implicit return
 
 							it "should finish subscribePromise for doc2", (done) ->
@@ -309,7 +359,7 @@ describe 'ChannelManager', ->
 					beforeEach (done) ->
 						setTimeout () =>
 							@redisSubscribePromises[0].resolve()
-							setTimeout done, 3
+							setTimeout done
 						, 3
 						return null # ... no implicit return
 
@@ -336,7 +386,7 @@ describe 'ChannelManager', ->
 						beforeEach (done) ->
 							setTimeout () =>
 								@redisSubscribePromises[1].resolve()
-								setTimeout done, 3
+								setTimeout done
 							, 5
 							return null # ... no implicit return
 
@@ -368,7 +418,7 @@ describe 'ChannelManager', ->
 				beforeEach (done) ->
 					setTimeout () =>
 						@redisSubscribePromises[0].resolve()
-						setTimeout done, 3
+						setTimeout done
 					, 3
 					return null # ... no implicit return
 
@@ -387,7 +437,7 @@ describe 'ChannelManager', ->
 					beforeEach (done) ->
 						setTimeout () =>
 							@redisUnsubscribePromises[0].resolve()
-							setTimeout done, 3
+							setTimeout done
 						, 3
 						return null # ... no implicit return
 
@@ -402,25 +452,7 @@ describe 'ChannelManager', ->
 					it "should have cleared the tear down state", () ->
 						expect(@clientChannelMapTearDown.has(@channel1)).to.equal false
 
-		describe "when lots of requests race", ->
-			beforeEach () ->
-				@subscribePromise1 = @ChannelManager.subscribe(@rclient, entity, @id1)
-				@ChannelManager.unsubscribe(@rclient, entity, @id1)
-				@tearDownPromise1 = @clientChannelMapTearDown.get(@channel1)
-
-				@subscribePromise2 = @ChannelManager.subscribe(@rclient, entity, @id1)
-				@ChannelManager.unsubscribe(@rclient, entity, @id1)
-				@tearDownPromise2 = @clientChannelMapTearDown.get(@channel1)
-
-				@subscribePromise3 = @ChannelManager.subscribe(@rclient, entity, @id1)
-				@ChannelManager.unsubscribe(@rclient, entity, @id1)
-				@tearDownPromise3 = @clientChannelMapTearDown.get(@channel1)
-
-				@subscribePromise4 = @ChannelManager.subscribe(@rclient, entity, @id1)
-				@ChannelManager.unsubscribe(@rclient, entity, @id1)
-				@tearDownPromise4 = @clientChannelMapTearDown.get(@channel1)
-				return null # ... no implicit return
-
+		verifyConsistentBehaviour = ->
 			it "should not finish any subscribePromise", (done) ->
 				{sentinel, p} = getPromiseThatResolvesASentinelSoon()
 				Promise.race([@subscribePromise1, @subscribePromise2, @subscribePromise3, @subscribePromise4, p])
@@ -439,7 +471,7 @@ describe 'ChannelManager', ->
 				beforeEach (done) ->
 					setTimeout () =>
 						@redisSubscribePromises[0].resolve()
-						setTimeout done, 3
+						setTimeout done
 					, 3
 					return null # ... no implicit return
 
@@ -479,7 +511,7 @@ describe 'ChannelManager', ->
 							@redisSubscribePromises[1].resolve()
 							setTimeout () =>
 								@redisSubscribePromises[2].resolve()
-								setTimeout done, 3
+								setTimeout done
 							, 3
 						, 3
 						return null # ... no implicit return
@@ -502,7 +534,7 @@ describe 'ChannelManager', ->
 						beforeEach (done) ->
 							setTimeout () =>
 								@redisSubscribePromises[3].resolve()
-								setTimeout done, 3
+								setTimeout done
 							, 3
 							return null # ... no implicit return
 
@@ -532,8 +564,7 @@ describe 'ChannelManager', ->
 								setTimeout () =>
 									# actually there is just one redis unsubscribe call
 									@redisUnsubscribePromises[0].resolve()
-									setTimeout done, 3
-								, 3
+									setTimeout done
 								return null # ... no implicit return
 
 							it "should have finished unsubscribing", (done) ->
@@ -546,3 +577,85 @@ describe 'ChannelManager', ->
 
 							it "should have cleared the tear down state", () ->
 								expect(@clientChannelMapTearDown.has(@channel1)).to.equal false
+
+		describe "when lots of requests race in a single event loop cycle (synchronous)", ->
+			beforeEach (done) ->
+				@subscribePromise1 = @ChannelManager.subscribe(@rclient, entity, @id1)
+				@ChannelManager.unsubscribe(@rclient, entity, @id1)
+				@tearDownPromise1 = @clientChannelMapTearDown.get(@channel1)
+
+				@subscribePromise2 = @ChannelManager.subscribe(@rclient, entity, @id1)
+				@ChannelManager.unsubscribe(@rclient, entity, @id1)
+				@tearDownPromise2 = @clientChannelMapTearDown.get(@channel1)
+
+				@subscribePromise3 = @ChannelManager.subscribe(@rclient, entity, @id1)
+				@ChannelManager.unsubscribe(@rclient, entity, @id1)
+				@tearDownPromise3 = @clientChannelMapTearDown.get(@channel1)
+
+				@subscribePromise4 = @ChannelManager.subscribe(@rclient, entity, @id1)
+				@ChannelManager.unsubscribe(@rclient, entity, @id1)
+				@tearDownPromise4 = @clientChannelMapTearDown.get(@channel1)
+				setTimeout done
+				return null # ... no implicit return
+
+			verifyConsistentBehaviour()
+
+		describe "when lots of requests race with process.nextTick in between", ->
+			beforeEach (done) ->
+				@subscribePromise1 = @ChannelManager.subscribe(@rclient, entity, @id1)
+				process.nextTick =>
+					@ChannelManager.unsubscribe(@rclient, entity, @id1)
+					@tearDownPromise1 = @clientChannelMapTearDown.get(@channel1)
+
+					process.nextTick =>
+						@subscribePromise2 = @ChannelManager.subscribe(@rclient, entity, @id1)
+						process.nextTick =>
+							@ChannelManager.unsubscribe(@rclient, entity, @id1)
+							@tearDownPromise2 = @clientChannelMapTearDown.get(@channel1)
+
+							process.nextTick =>
+								@subscribePromise3 = @ChannelManager.subscribe(@rclient, entity, @id1)
+								process.nextTick =>
+									@ChannelManager.unsubscribe(@rclient, entity, @id1)
+									@tearDownPromise3 = @clientChannelMapTearDown.get(@channel1)
+
+									process.nextTick =>
+										@subscribePromise4 = @ChannelManager.subscribe(@rclient, entity, @id1)
+										process.nextTick =>
+											@ChannelManager.unsubscribe(@rclient, entity, @id1)
+											@tearDownPromise4 = @clientChannelMapTearDown.get(@channel1)
+
+											# let some Promise.then calls run
+											setTimeout done
+				return null # ... no implicit return
+
+			verifyConsistentBehaviour()
+
+		describe "when lots of requests race with network dispatches in between", ->
+			beforeEach (done) ->
+				@subscribePromise1 = @ChannelManager.subscribe(@rclient, entity, @id1)
+				setTimeout =>
+					@ChannelManager.unsubscribe(@rclient, entity, @id1)
+					@tearDownPromise1 = @clientChannelMapTearDown.get(@channel1)
+
+					setTimeout =>
+						@subscribePromise2 = @ChannelManager.subscribe(@rclient, entity, @id1)
+						setTimeout =>
+							@ChannelManager.unsubscribe(@rclient, entity, @id1)
+							@tearDownPromise2 = @clientChannelMapTearDown.get(@channel1)
+
+							setTimeout =>
+								@subscribePromise3 = @ChannelManager.subscribe(@rclient, entity, @id1)
+								setTimeout =>
+									@ChannelManager.unsubscribe(@rclient, entity, @id1)
+									@tearDownPromise3 = @clientChannelMapTearDown.get(@channel1)
+
+									setTimeout =>
+										@subscribePromise4 = @ChannelManager.subscribe(@rclient, entity, @id1)
+										setTimeout =>
+											@ChannelManager.unsubscribe(@rclient, entity, @id1)
+											@tearDownPromise4 = @clientChannelMapTearDown.get(@channel1)
+											setTimeout done
+				return null # ... no implicit return
+
+			verifyConsistentBehaviour()

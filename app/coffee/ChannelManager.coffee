@@ -40,13 +40,10 @@ module.exports = ChannelManager =
                         clientChannelMap.delete(channel)
                 return p
 
-            if clientChannelMapTearDown.has(channel)
-                # wait for the unsubscribe request to complete
-                unsubscribePromise = clientChannelMapTearDown.get(channel)
-                subscribePromise = unsubscribePromise.finally(actualSubscribe)
-
-            else
-                subscribePromise = actualSubscribe()
+            # wait for the unsubscribe request to complete
+            unsubscribePromise = Promise.resolve(clientChannelMapTearDown.get(channel))
+            # unsubscribePromise never rejects
+            subscribePromise = unsubscribePromise.then(actualSubscribe)
 
             clientChannelMap.set(channel, subscribePromise)
             logger.log {channel}, "subscribed to new channel"
@@ -72,19 +69,21 @@ module.exports = ChannelManager =
                     clientChannelMapTearDown.delete(channel)
                     return Promise.resolve()
 
-                p = rclient.unsubscribe channel
-                p.catch (err) ->
-                    logger.error {channel, err}, "failed to unsubscribed from channel"
-                    metrics.inc "unsubscribe.failed.#{baseChannel}"
-                p.finally () ->
+                # nothing is attaching to this Promise, catch any errors
+                p = rclient.unsubscribe(channel)
+                .finally () ->
                     # new unsubscribe requests can overtake, skip cleanup
                     if clientChannelMapTearDown.get(channel) is unsubscribePromise
                         clientChannelMapTearDown.delete(channel)
+                .catch (err) ->
+                    logger.error {channel, err}, "failed to unsubscribed from channel"
+                    metrics.inc "unsubscribe.failed.#{baseChannel}"
                 return p
 
             # wait for the subscribe request to complete
             subscribePromise = clientChannelMap.get(channel)
-            unsubscribePromise = subscribePromise.finally(actualUnsubscribe)
+            # subscribePromise can reject, unsubscribe in any case
+            unsubscribePromise = subscribePromise.then(actualUnsubscribe, actualUnsubscribe)
             clientChannelMapTearDown.set(channel, unsubscribePromise)
 
             # new subscribe requests must wait for the unsubscribe request to
