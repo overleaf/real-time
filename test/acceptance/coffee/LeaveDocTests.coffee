@@ -19,12 +19,14 @@ describe "leaveDoc", ->
 		@ops = ["mock", "doc", "ops"]
 		sinon.spy(logger, "error")
 		sinon.spy(logger, "warn")
+		sinon.spy(logger, "log")
 		@other_doc_id = FixturesManager.getRandomId()
-	
+
 	after ->
 		logger.error.restore() # remove the spy
 		logger.warn.restore()
-			
+		logger.log.restore()
+
 	describe "when joined to a doc", ->
 		beforeEach (done) ->
 			async.series [
@@ -33,28 +35,28 @@ describe "leaveDoc", ->
 						privilegeLevel: "readAndWrite"
 					}, (e, {@project_id, @user_id}) =>
 						cb(e)
-					
+
 				(cb) =>
 					FixturesManager.setUpDoc @project_id, {@lines, @version, @ops}, (e, {@doc_id}) =>
 						cb(e)
-						
+
 				(cb) =>
 					@client = RealTimeClient.connect()
 					@client.on "connectionAccepted", cb
-						
+
 				(cb) =>
 					@client.emit "joinProject", project_id: @project_id, cb
-				
+
 				(cb) =>
 					@client.emit "joinDoc", @doc_id, (error, @returnedArgs...) => cb(error)
 			], done
-							
+
 		describe "then leaving the doc", ->
 			beforeEach (done) ->
 				@client.emit "leaveDoc", @doc_id, (error) ->
 					throw error if error?
 					done()
-			
+
 			it "should have left the doc room", (done) ->
 				RealTimeClient.getConnectedClient getClientId(@client), (error, client) =>
 					expect(@doc_id in client.rooms).to.equal false
@@ -83,5 +85,5 @@ describe "leaveDoc", ->
 					throw error if error?
 					done()
 
-			it "should trigger a warning only", ->
-				sinon.assert.calledWith(logger.warn, sinon.match.any, "ignoring request from client to leave room it is not in")
+			it "should trigger a low level message only", ->
+				sinon.assert.calledWith(logger.log, sinon.match.any, "ignoring request from client to leave room it is not in")
