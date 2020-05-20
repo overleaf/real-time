@@ -31,11 +31,13 @@ module.exports = ChannelManager =
             clientChannelMap.set(channel, subscribePromise)
             logger.log {channel}, "subscribed to new channel"
             metrics.inc "subscribe.#{baseChannel}"
-            subscribePromise.catch () ->
-                metrics.inc "subscribe.failed.#{baseChannel}"
-                # clear state
-                clientChannelMap.delete(channel)
-            return subscribePromise
+            return new Promise (resolve, reject) ->
+                subscribePromise.then(resolve)
+                subscribePromise.catch (err) ->
+                    metrics.inc "subscribe.failed.#{baseChannel}"
+                    # clear state
+                    clientChannelMap.delete(channel)
+                    reject(err)
 
     unsubscribe: (rclient, baseChannel, id) ->
         clientChannelMap = @getClientMapEntry(rclient)
