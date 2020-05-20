@@ -27,19 +27,19 @@ describe 'AuthorizationManager', ->
 			@AuthorizationManager.assertClientCanViewProject @client, (error) ->
 				expect(error).to.be.null
 				done()
-
+	
 		it "should allow the readAndWrite privilegeLevel", (done) ->
 			@client.params.privilege_level = "readAndWrite"
 			@AuthorizationManager.assertClientCanViewProject @client, (error) ->
 				expect(error).to.be.null
 				done()
-
+				
 		it "should allow the owner privilegeLevel", (done) ->
 			@client.params.privilege_level = "owner"
 			@AuthorizationManager.assertClientCanViewProject @client, (error) ->
 				expect(error).to.be.null
 				done()
-
+				
 		it "should return an error with any other privilegeLevel", (done) ->
 			@client.params.privilege_level = "unknown"
 			@AuthorizationManager.assertClientCanViewProject @client, (error) ->
@@ -52,19 +52,19 @@ describe 'AuthorizationManager', ->
 			@AuthorizationManager.assertClientCanEditProject @client, (error) ->
 				error.message.should.equal "not authorized"
 				done()
-
+	
 		it "should allow the readAndWrite privilegeLevel", (done) ->
 			@client.params.privilege_level = "readAndWrite"
 			@AuthorizationManager.assertClientCanEditProject @client, (error) ->
 				expect(error).to.be.null
 				done()
-
+				
 		it "should allow the owner privilegeLevel", (done) ->
 			@client.params.privilege_level = "owner"
 			@AuthorizationManager.assertClientCanEditProject @client, (error) ->
 				expect(error).to.be.null
 				done()
-
+				
 		it "should return an error with any other privilegeLevel", (done) ->
 			@client.params.privilege_level = "unknown"
 			@AuthorizationManager.assertClientCanEditProject @client, (error) ->
@@ -84,16 +84,20 @@ describe 'AuthorizationManager', ->
 				@client.params.privilege_level = "unknown"
 
 			it "should not allow access", () ->
-				@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, (err) ->
-					err.message.should.equal "not authorized"
+				@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
+				@callback
+					.calledWith(new Error("not authorised"))
+					.should.equal true
 
 			describe "even when authorised at the doc level", ->
 				beforeEach (done) ->
 					@AuthorizationManager.addAccessToDoc @client, @doc_id, done
 
 				it "should not allow access", () ->
-					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, (err) ->
-						err.message.should.equal "not authorized"
+					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
+					@callback
+						.calledWith(new Error("not authorised"))
+						.should.equal true
 
 		describe "when authorised at the project level", ->
 			beforeEach () ->
@@ -101,8 +105,10 @@ describe 'AuthorizationManager', ->
 
 			describe "and not authorised at the document level", ->
 				it "should not allow access", () ->
-					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, (err) ->
-						err.message.should.equal "not authorized"
+					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
+					@callback
+						.calledWith(new Error("not authorised"))
+						.should.equal true
 
 			describe "and authorised at the document level", ->
 				beforeEach (done) ->
@@ -120,8 +126,10 @@ describe 'AuthorizationManager', ->
 						@AuthorizationManager.removeAccessToDoc @client, @doc_id, done
 
 				it "should deny access", () ->
-					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, (err) ->
-						err.message.should.equal "not authorized"
+					@AuthorizationManager.assertClientCanViewProjectAndDoc @client, @doc_id, @callback
+					@callback
+						.calledWith(new Error("not authorised"))
+						.should.equal true
 
 	describe "assertClientCanEditProjectAndDoc", ->
 		beforeEach () ->
@@ -134,16 +142,20 @@ describe 'AuthorizationManager', ->
 				@client.params.privilege_level = "readOnly"
 
 			it "should not allow access", () ->
-				@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, (err) ->
-					err.message.should.equal "not authorized"
+				@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
+				@callback
+					.calledWith(new Error("not authorised"))
+					.should.equal true
 
 			describe "even when authorised at the doc level", ->
 				beforeEach (done) ->
 					@AuthorizationManager.addAccessToDoc @client, @doc_id, done
 
 				it "should not allow access", () ->
-					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, (err) ->
-						err.message.should.equal "not authorized"
+					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
+					@callback
+						.calledWith(new Error("not authorised"))
+						.should.equal true
 
 		describe "when authorised at the project level", ->
 			beforeEach () ->
@@ -151,8 +163,10 @@ describe 'AuthorizationManager', ->
 
 			describe "and not authorised at the document level", ->
 				it "should not allow access", () ->
-					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, (err) ->
-						err.message.should.equal "not authorized"
+					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
+					@callback
+						.calledWith(new Error("not authorised"))
+						.should.equal true
 
 			describe "and authorised at the document level", ->
 				beforeEach (done) ->
@@ -170,5 +184,7 @@ describe 'AuthorizationManager', ->
 						@AuthorizationManager.removeAccessToDoc @client, @doc_id, done
 
 				it "should deny access", () ->
-					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, (err) ->
-						err.message.should.equal "not authorized"
+					@AuthorizationManager.assertClientCanEditProjectAndDoc @client, @doc_id, @callback
+					@callback
+						.calledWith(new Error("not authorised"))
+						.should.equal true
