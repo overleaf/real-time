@@ -11,7 +11,7 @@ rclient = redis.createClient(settings.redis.pubsub)
 describe "leaveProject", ->
 	before (done) ->
 		MockDocUpdaterServer.run done
-
+		
 	describe "with other clients in the project", ->
 		before (done) ->
 			async.series [
@@ -22,23 +22,23 @@ describe "leaveProject", ->
 							name: "Test Project"
 						}
 					}, (e, {@project_id, @user_id}) => cb()
-
+					
 				(cb) =>
 					@clientA = RealTimeClient.connect()
 					@clientA.on "connectionAccepted", cb
-
+					
 				(cb) =>
 					@clientB = RealTimeClient.connect()
 					@clientB.on "connectionAccepted", cb
-
+					
 					@clientBDisconnectMessages = []
 					@clientB.on "clientTracking.clientDisconnected", (data) =>
 						@clientBDisconnectMessages.push data
-
+						
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
 						cb(error)
-
+							
 				(cb) =>
 					@clientB.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
 						cb(error)
@@ -56,23 +56,23 @@ describe "leaveProject", ->
 					# leaveProject is called when the client disconnects
 					@clientA.on "disconnect", () -> cb()
 					@clientA.disconnect()
-
+					
 				(cb) =>
 					# The API waits a little while before flushing changes
 					setTimeout done, 1000
-
+					
 			], done
 
 		it "should emit a disconnect message to the room", ->
 			@clientBDisconnectMessages.should.deep.equal [@clientA.socket.sessionid]
-
+	
 		it "should no longer list the client in connected users", (done) ->
 			@clientB.emit "clientTracking.getConnectedUsers", (error, users) =>
 				for user in users
 					if user.client_id == @clientA.socket.sessionid
 						throw "Expected clientA to not be listed in connected users"
 				return done()
-
+		
 		it "should not flush the project to the document updater", ->
 			MockDocUpdaterServer.deleteProject
 				.calledWith(@project_id)
@@ -102,11 +102,11 @@ describe "leaveProject", ->
 							name: "Test Project"
 						}
 					}, (e, {@project_id, @user_id}) => cb()
-
+					
 				(cb) =>
 					@clientA = RealTimeClient.connect()
 					@clientA.on "connect", cb
-
+						
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
 						cb(error)
@@ -121,7 +121,7 @@ describe "leaveProject", ->
 					# leaveProject is called when the client disconnects
 					@clientA.on "disconnect", () -> cb()
 					@clientA.disconnect()
-
+					
 				(cb) =>
 					# The API waits a little while before flushing changes
 					setTimeout done, 1000
