@@ -12,12 +12,12 @@ describe 'ChannelManager', ->
 			"settings-sharelatex": @settings = {}
 			"metrics-sharelatex": @metrics = {inc: sinon.stub(), summary: sinon.stub()}
 			"logger-sharelatex": @logger = { log: sinon.stub(), warn: sinon.stub(), error: sinon.stub() }
-
+	
 	describe "subscribe", ->
 
 		describe "when there is no existing subscription for this redis client", ->
 			beforeEach ->
-				@rclient.subscribe = sinon.stub().resolves()
+				@rclient.subscribe = sinon.stub()
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
 
 			it "should subscribe to the redis channel", ->
@@ -25,40 +25,19 @@ describe 'ChannelManager', ->
 
 		describe "when there is an existing subscription for this redis client", ->
 			beforeEach ->
-				@rclient.subscribe = sinon.stub().resolves()
+				@rclient.subscribe = sinon.stub()
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub().resolves()  # discard the original stub
+				@rclient.subscribe = sinon.stub()  # discard the original stub
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
 
 			it "should not subscribe to the redis channel", ->
 				@rclient.subscribe.called.should.equal false
 
-		describe "when subscribe errors", ->
-			# TODO(das7pad): rework after decaff -- our coffee-script version does not like async/await
-			beforeEach (done) ->
-				@rclient.subscribe = () ->
-					return new Promise (resolve, reject) ->
-						setTimeout((() -> reject(new Error("some redis error"))), 1)
-				p = @ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub().resolves()
-				p.then () ->
-					done(new Error('should not subscribe but fail'))
-				p.catch (err) =>
-					err.message.should.equal "some redis error"
-					@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal false
-					@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
-					done()
-				return null
-
-			it "should subscribe again", ->
-				@rclient.subscribe.called.should.equal true
-				@ChannelManager.getClientMapEntry(@rclient).has("applied-ops:1234567890abcdef").should.equal true
-
 		describe "when there is an existing subscription for another redis client but not this one", ->
 			beforeEach ->
-				@other_rclient.subscribe = sinon.stub().resolves()
+				@other_rclient.subscribe = sinon.stub()
 				@ChannelManager.subscribe @other_rclient, "applied-ops", "1234567890abcdef"
-				@rclient.subscribe = sinon.stub().resolves()  # discard the original stub
+				@rclient.subscribe = sinon.stub()  # discard the original stub
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
 
 			it "should subscribe to the redis channel on this redis client", ->
@@ -77,8 +56,8 @@ describe 'ChannelManager', ->
 
 		describe "when there is an existing subscription for this another redis client but not this one", ->
 			beforeEach ->
-				@other_rclient.subscribe = sinon.stub().resolves()
-				@rclient.unsubscribe = sinon.stub()
+				@other_rclient.subscribe = sinon.stub()
+				@rclient.unsubscribe = sinon.stub()  
 				@ChannelManager.subscribe @other_rclient, "applied-ops", "1234567890abcdef"
 				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
 
@@ -87,8 +66,8 @@ describe 'ChannelManager', ->
 
 		describe "when there is an existing subscription for this redis client", ->
 			beforeEach ->
-				@rclient.subscribe = sinon.stub().resolves()
-				@rclient.unsubscribe = sinon.stub()
+				@rclient.subscribe = sinon.stub()
+				@rclient.unsubscribe = sinon.stub()  
 				@ChannelManager.subscribe @rclient, "applied-ops", "1234567890abcdef"
 				@ChannelManager.unsubscribe @rclient, "applied-ops", "1234567890abcdef"
 
