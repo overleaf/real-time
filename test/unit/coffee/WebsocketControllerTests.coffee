@@ -130,7 +130,7 @@ describe 'WebsocketController', ->
 
 			it "should return an error", ->
 				@callback
-					.calledWith(new Error("subscribe failed"))
+					.calledWith(sinon.match({message: "subscribe failed"}))
 					.should.equal true
 				@callback.args[0][0].message.should.equal "subscribe failed"
 
