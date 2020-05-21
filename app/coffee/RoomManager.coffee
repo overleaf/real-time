@@ -70,8 +70,10 @@ module.exports = RoomManager =
       # Ignore any requests to leave when the client is not actually in the
       # room. This can happen if the client sends spurious leaveDoc requests
       # for old docs after a reconnection.
+      # It can also happen when we process a join and disconnect event in the
+      #  same event loop cycle.
       if !@_clientAlreadyInRoom(client, id)
-          logger.warn {client: client.id, entity, id}, "ignoring request from client to leave room it is not in"
+          logger.log {client: client.id, entity, id}, "ignoring request from client to leave room it is not in"
           return
       client.leave id
       @_clientsInRoom client, id, (afterCount) ->
