@@ -112,6 +112,28 @@ describe 'WebsocketController', ->
 			it "should not log an error", ->
 				@logger.error.called.should.equal false
 
+		describe "when the subscribe failed", ->
+			beforeEach ->
+				@client.id = "mock-client-id"
+				@project = {
+					name: "Test Project"
+					owner: {
+						_id: @owner_id = "mock-owner-id-123"
+					}
+				}
+				@privilegeLevel = "owner"
+				@ConnectedUsersManager.updateUserPosition = sinon.stub().callsArg(4)
+				@isRestrictedUser = true
+				@WebApiManager.joinProject = sinon.stub().callsArgWith(2, null, @project, @privilegeLevel, @isRestrictedUser)
+				@RoomManager.joinProject = sinon.stub().callsArgWith(2, new Error("subscribe failed"))
+				@WebsocketController.joinProject @client, @user, @project_id, @callback
+
+			it "should return an error", ->
+				@callback
+					.calledWith(sinon.match({message: "subscribe failed"}))
+					.should.equal true
+				@callback.args[0][0].message.should.equal "subscribe failed"
+
 	describe "leaveProject", ->
 		beforeEach ->
 			@DocumentUpdaterManager.flushProjectToMongoAndDelete = sinon.stub().callsArg(1)
@@ -124,6 +146,19 @@ describe 'WebsocketController', ->
 			@client.ol_context.user_id = @user_id
 			@WebsocketController.FLUSH_IF_EMPTY_DELAY = 0
 			tk.reset() # Allow setTimeout to work.
+
+		describe "when the client did not joined a project yet", ->
+			beforeEach (done) ->
+				@client.ol_context = {}
+				@WebsocketController.leaveProject @io, @client, done
+
+			it "should bail out when calling leaveProject", () ->
+				@WebsocketLoadBalancer.emitToRoom.called.should.equal false
+				@RoomManager.leaveProjectAndDocs.called.should.equal false
+				@ConnectedUsersManager.markUserAsDisconnected.called.should.equal false
+
+			it "should not inc any metric", () ->
+				@metrics.inc.called.should.equal false
 
 		describe "when the project is empty", ->
 			beforeEach (done) ->
@@ -182,8 +217,8 @@ describe 'WebsocketController', ->
 					.calledWith(@project_id)
 					.should.equal false
 
-			it "should increment the leave-project metric", ->
-				@metrics.inc.calledWith("editor.leave-project").should.equal true
+			it "should not increment the leave-project metric", ->
+				@metrics.inc.calledWith("editor.leave-project").should.equal false
 
 		describe "when client has not joined a project", ->
 			beforeEach (done) ->
@@ -206,8 +241,8 @@ describe 'WebsocketController', ->
 					.calledWith(@project_id)
 					.should.equal false
 
-			it "should increment the leave-project metric", ->
-				@metrics.inc.calledWith("editor.leave-project").should.equal true
+			it "should not increment the leave-project metric", ->
+				@metrics.inc.calledWith("editor.leave-project").should.equal false
 
 	describe "joinDoc", ->
 		beforeEach ->

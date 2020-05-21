@@ -40,6 +40,7 @@ module.exports = WebsocketController =
 			client.ol_context["is_restricted_user"] = !!(isRestrictedUser)
 
 			RoomManager.joinProject client, project_id, (err) ->
+				return callback(err) if err
 				logger.log {user_id, project_id, client_id: client.id}, "user joined project"
 				callback null, project, privilegeLevel, WebsocketController.PROTOCOL_VERSION
 
@@ -51,21 +52,12 @@ module.exports = WebsocketController =
 	# is determined by FLUSH_IF_EMPTY_DELAY.
 	FLUSH_IF_EMPTY_DELAY: 500 #ms
 	leaveProject: (io, client, callback = (error) ->) ->
-			metrics.inc "editor.leave-project"
 			{project_id, user_id} = client.ol_context
+			return callback() unless project_id # client did not join project
 
+			metrics.inc "editor.leave-project"
 			logger.log {project_id, user_id, client_id: client.id}, "client leaving project"
 			WebsocketLoadBalancer.emitToRoom project_id, "clientTracking.clientDisconnected", client.id
-
-			# bail out if the client had not managed to authenticate or join
-			# the project.  Prevents downstream errors in docupdater from
-			# flushProjectToMongoAndDelete with null project_id.
-			if not user_id?
-				logger.log {client_id: client.id}, "client leaving, unknown user"
-				return callback()
-			if not project_id?
-				logger.log {user_id: user_id, client_id: client.id}, "client leaving, not in project"
-				return callback()
 
 			# We can do this in the background
 			ConnectedUsersManager.markUserAsDisconnected project_id, client.id, (err) ->
