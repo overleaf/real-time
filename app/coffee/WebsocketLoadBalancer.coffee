@@ -67,12 +67,10 @@ module.exports = WebsocketLoadBalancer =
 			if message.room_id == "all"
 				io.sockets.emit(message.message, message.payload...)
 			else if message.message is 'clientTracking.refresh' && message.room_id?
-				RoomManager.getClientsInRoomPseudoAsync io, message.room_id, (err, clientIds) ->
-					if err?
-						return logger.err {room: message.room_id, err}, "failed to get room clients"
-					logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientIds}, "refreshing client list"
-					for clientId in clientIds
-						ConnectedUsersManager.refreshClient(message.room_id, clientId)
+				clientList = RoomManager.getClientsInRoomSync(io, message.room_id)
+				logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientList}, "refreshing client list"
+				for client in clientList.map((id) -> io.sockets.connected[id])
+					ConnectedUsersManager.refreshClient(message.room_id, client.publicId)
 			else if message.room_id?
 				if message._id? && Settings.checkEventOrder
 					status = EventLogger.checkEventOrder("editor-events", message._id, message)

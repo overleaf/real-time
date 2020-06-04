@@ -97,11 +97,11 @@ describe "DocumentUpdaterController", ->
 			clients[@otherClients[1].id] = @otherClients[1]
 			@update =
 				op: [ t: "foo", p: 12 ]
-				meta: source: @sourceClient.id
+				meta: source: @sourceClient.publicId
 				v: @version = 42
 				doc: @doc_id
 			@io.sockets = {connected: clients}
-			@io.to = sinon.stub().returns(emit: @room_emit = sinon.stub())
+			@RoomManager.getClientsInRoomSync = sinon.stub().returns(Object.keys(clients))
 		describe "normally", ->
 			beforeEach ->
 				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
@@ -113,12 +113,10 @@ describe "DocumentUpdaterController", ->
 				@sourceClient.emit.calledOnce.should.equal true
 
 			it "should emit from the source client to the clients connected to the document", ->
-				@sourceClient.to
-					.calledWith(@doc_id)
-					.should.equal true
-				@sourceClient.emit_to
-						.calledWith("otUpdateApplied", @update)
+				@otherClients[0].emit.calledWith("otUpdateApplied", @update)
 						.should.equal true
+				@otherClients[1].emit.calledWith("otUpdateApplied", @update)
+					.should.equal true
 
 		describe "from a remote client", ->
 			beforeEach ->
@@ -126,11 +124,12 @@ describe "DocumentUpdaterController", ->
 				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
 
 			it "should emit to the clients connected to the document", ->
-				@io.to
-					.calledWith(@doc_id)
+				# this is misleading, they are not the actual source...
+				@sourceClient.emit.calledWith("otUpdateApplied", @update)
 					.should.equal true
-				@room_emit
-					.calledWith("otUpdateApplied", @update)
+				@otherClients[0].emit.calledWith("otUpdateApplied", @update)
+					.should.equal true
+				@otherClients[1].emit.calledWith("otUpdateApplied", @update)
 					.should.equal true
 
 		describe "with a duplicate op", ->
@@ -144,12 +143,8 @@ describe "DocumentUpdaterController", ->
 					.should.equal true
 
 			it "should not send anything to the other clients (they've already had the op)", ->
-				@sourceClient.emit_to
-						.calledWith("otUpdateApplied")
-						.should.equal false
-				@room_emit
-					.calledWith("otUpdateApplied")
-					.should.equal false
+				@otherClients[0].emit.called.should.equal false
+				@otherClients[1].emit.called.should.equal false
 
 	describe "_processErrorFromDocumentUpdater", ->
 		beforeEach ->

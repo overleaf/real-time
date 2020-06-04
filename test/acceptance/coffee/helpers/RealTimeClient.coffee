@@ -35,6 +35,8 @@ module.exports = Client =
 				}
 			}
 		)
+		client.on 'connectionAccepted', (_, publicId) ->
+			client.publicId = publicId
 		return client
 		
 	getConnectedClients: (callback = (error, clients) ->) ->

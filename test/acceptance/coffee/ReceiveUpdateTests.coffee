@@ -103,7 +103,7 @@ describe "receiveUpdate", ->
 				doc_id: @doc_id
 				op:
 					meta:
-						source: getClientId(@clientA)
+						source: @clientA.publicId
 					v: @version
 					doc: @doc_id
 					op: [{i: "foo", p: 50}]				
@@ -128,7 +128,7 @@ describe "receiveUpdate", ->
 				doc_id: @doc_id_second
 				op:
 					meta:
-						source: getClientId(@clientC)
+						source: @clientC.publicId
 					v: @version
 					doc: @doc_id_second
 					op: [{i: "update from clientC", p: 50}]

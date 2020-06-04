@@ -5,6 +5,7 @@ WebsocketController = require "./WebsocketController"
 HttpController = require "./HttpController"
 HttpApiController = require "./HttpApiController"
 bodyParser = require "body-parser"
+base64id = require("base64id")
 
 basicAuth = require('basic-auth-connect')
 httpAuth = basicAuth (user, pass)->
@@ -82,7 +83,8 @@ module.exports = Router =
 				return
 
 			# send positive confirmation that the client has a valid connection
-			client.emit("connectionAccepted")
+			client.publicId = base64id.generateId()
+			client.emit("connectionAccepted", null, client.publicId)
 
 			metrics.inc('socket-io.connection')
 			metrics.gauge('socket-io.clients', Object.keys(io.sockets.connected).length)

@@ -64,7 +64,7 @@ describe "clientTracking", ->
 					row: @row
 					column: @column
 					doc_id: @doc_id
-					id: getClientId(@clientA)
+					id: @clientA.publicId
 					user_id: @user_id
 					name: "Joe Bloggs"
 				}
@@ -73,7 +73,7 @@ describe "clientTracking", ->
 		it "should record the update in getConnectedUsers", (done) ->
 			@clientB.emit "clientTracking.getConnectedUsers", (error, users) =>
 				for user in users
-					if user.client_id == getClientId(@clientA)
+					if user.client_id == @clientA.publicId
 						expect(user.cursorData).to.deep.equal({
 							row: @row
 							column: @column
@@ -140,7 +140,7 @@ describe "clientTracking", ->
 					row: @row
 					column: @column
 					doc_id: @doc_id
-					id: getClientId(@anonymous)
+					id: @anonymous.publicId
 					user_id: "anonymous-user"
 					name: ""
 				}

@@ -59,21 +59,20 @@ module.exports = DocumentUpdaterController =
 				HealthCheckManager.check channel, message.key
 
 	_applyUpdateFromDocumentUpdater: (io, doc_id, update) ->
+		clientList = RoomManager.getClientsInRoomSync io, doc_id
+		# avoid unnecessary work if no clients are connected
+		if clientList.length is 0
+			return
 		source = update.meta.source
-		sender = io.sockets.connected[source]
-		if sender
-			logger.log {doc_id, version: update.v, source}, "distributing update to sender"
-			sender.emit "otUpdateApplied", v: update.v, doc: update.doc
-
-		return if update.dup
-		logger.log {doc_id, version: update.v, source}, "distributing updates to clients"
-		# Broadcast from either the `sender`s socket or 'anonymously' from `io`.
-		# from `sender`: The sender is (still) connected by the time we receive
-		#                 the confirmation from doc-updater.
-		#                The broadcast will not emit back to the sender.
-		# from `io`: The broadcast will emit to all sockets connected to this pod
-		#             (and only to those that joined the `doc_id` room).
-		(sender || io).to(doc_id).emit "otUpdateApplied", update
+		# send updates to clients
+		logger.log doc_id: doc_id, version: update.v, source, socketIoClients: clientList, "distributing updates to clients"
+		for client in clientList.map((id) -> io.sockets.connected[id])
+			if client.publicId == source
+				logger.log doc_id, version: update.v, source, "distributing update to sender"
+				client.emit "otUpdateApplied", v: update.v, doc: update.doc
+			else if !update.dup # Duplicate ops should just be sent back to sending client for acknowledgement
+				logger.log doc_id, version: update.v, source, client_id: client.id, "distributing update to collaborator"
+				client.emit "otUpdateApplied", update
 
 	_processErrorFromDocumentUpdater: (io, doc_id, error, message) ->
 		RoomManager.getClientsInRoomPseudoAsync io, doc_id, (err, clientIds) ->
