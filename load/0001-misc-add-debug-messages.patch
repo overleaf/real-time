@@ -1,0 +1,48 @@
+From 833961d248fee63d71381633cc1ccced90920ddb Mon Sep 17 00:00:00 2001
+From: Jakob Ackermann <jakob.ackermann@overleaf.com>
+Date: Mon, 15 Jun 2020 10:44:24 +0100
+Subject: [PATCH] [misc] add debug messages
+
+---
+ dist/socket.io.dev.js | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dist/socket.io.dev.js b/dist/socket.io.dev.js
+index 5e48b99..33dc4bc 100644
+--- a/dist/socket.io.dev.js
++++ b/dist/socket.io.dev.js
+@@ -4486,6 +4486,7 @@ return /******/ (function(modules) { // webpackBootstrap
+ 	  var callback = function (packet, index, total) {
+ 	    // if its the first message we consider the transport open
+ 	    if ('opening' === self.readyState) {
++	      console.error({data, dataLength: (data && data.length), id: self.query.id});
+ 	      self.onOpen();
+ 	    }
+ 	
+@@ -5176,6 +5177,7 @@ return /******/ (function(modules) { // webpackBootstrap
+ 	
+ 	    if (length != msg.length) {
+ 	      // parser error - ignoring payload
++	      console.error({data, dataLength: data.length, msg, length});
+ 	      return callback(err, 0, 1);
+ 	    }
+ 	
+@@ -5184,6 +5186,7 @@ return /******/ (function(modules) { // webpackBootstrap
+ 	
+ 	      if (err.type === packet.type && err.data === packet.data) {
+ 	        // parser error in individual packet - ignoring payload
++	        console.error({data, dataLength: data.length, packet});
+ 	        return callback(err, 0, 1);
+ 	      }
+ 	
+@@ -5197,6 +5200,7 @@ return /******/ (function(modules) { // webpackBootstrap
+ 	  }
+ 	
+ 	  if (length !== '') {
++	    console.error({data, dataLength: data.length});
+ 	    // parser error - ignoring payload
+ 	    return callback(err, 0, 1);
+ 	  }
+-- 
+2.17.1
+
