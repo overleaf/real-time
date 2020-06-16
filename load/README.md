@@ -1,34 +1,57 @@
-# Usage
+### Usage
 
-Install socket.io v2 and checkout the socket.io-client repo to apply patches:
+Install socket.io v2
+
+```
+$ npm install socket.io@2
+```
+
+### server
+
+```
+# start the demo server on port IO_SERVER_PORT=8080
+$ START_IO=1 START_BENCH=false /path/to/node load.js
+```
+
+### client
+
+Open `http://127.0.0.1:8080/` in your browser.
+
+Optionally configure the client with a JSON blob as the hash of the URI.
+> Note: The demo page will pre-populate the blob with defaults that trigger
+>        the parse-error/leak reproducibly.
+
+- `IO_ENDPOINT` custom origin for the demo server
+- `IO_PATH` `/socket.io` path component of the demo server
+- `COLOR` an optional marker for requests (e.g. blue vs green for two tabs)
+- `CLIENT_NUM` total number of clients to create
+- `BATCH_SIZE` number of clients to create in a single before ...
+- `BATCH_DELAY` (in ms) ...detaching to allow clients to process their tests
+- `DEBUG` enable/disable logging statements
+
+### pushing limits
+
+Running the load test with multiple clients might require increasing the
+ resource limits of the node process, namely the number of open files.
+
+Here is a simple way to do this:
+
+```
+# Create a sudo shell, bump limits and step back down again.
+$ sudo -E sh -c 'ulimit -n 50000 && sudo -u $SUDO_USER -- sh -c "ulimit -n && START_IO=1 START_BENCH=false SOCKET_IO_CLIENT_DEV=/path/to/socket.io-client/dist/socket.io.dev.js /path/to/node load.js"'
+```
+
+
+### Custom client
+
+Checkout the socket.io-client repo to apply patches:
 
 ```
 git clone https://github.com/socketio/socket.io-client
 cd socket.io-client
 git checkout -b ol-load-testing
 git am /path/to/this/directory/*.patch
-```
 
-### client
-
-Configure the client with a JSON blob as the hash of the URI:
-
-```
-{"DEBUG":true,"IO_ENDPOINT":"http://127.0.0.1:8080","IO_PATH":"/socket.io","CLIENT_NUM":1000,"BATCH_SIZE":200,"BATCH_DELAY":10000,"COLOR":"blue"}
-```
-translates into:
-
-```
-http://127.0.0.1:8080/index.html#{%22DEBUG%22:true,%22IO_ENDPOINT%22:%22http://127.0.0.1:8080%22,%22IO_PATH%22:%22/socket.io%22,%22CLIENT_NUM%22:1000,%22BATCH_SIZE%22:200,%22BATCH_DELAY%22:10000,%22COLOR%22:%22blue%22}
-```
-
-Your browser will happily accept the plain JSON blob and escape it as needed.
-
-### server
-
-You will need to bump the limits of the node process, the simplest way is:
-
-```
-# Create a sudo shell, bump limits and step back down again.
-$ sudo -E sh -c 'ulimit -n 50000 && sudo -u $SUDO_USER -- sh -c "ulimit -n && START_IO=1 START_BENCH=false SOCKET_IO_CLIENT_DEV=/path/to/socket.io-client/dist/socket.io.dev.js /path/to/node load.js"'
+# restart the server with the following additional environment variable set
+$ SOCKET_IO_CLIENT_DEV=/path/to/socket.io-client/dist/socket.io.dev.js ...
 ```

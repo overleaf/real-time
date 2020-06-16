@@ -1,35 +1,38 @@
+const IS_NODE = typeof process !== 'undefined' && process.env
 let CTX
-if (typeof process !== 'undefined' && process.env) {
+if (IS_NODE) {
   CTX = process.env
 } else {
   CTX = Object.assign(
     {
-      DEBUG: false,
-      IO_ENDPOINT: null,
+      DEBUG: true,
+      IO_ENDPOINT: window.location.origin,
       IO_PATH: '/socket.io',
       CLIENT_NUM: 1000
     },
     JSON.parse(decodeURIComponent(window.location.hash.slice(1)) || '{}')
   )
-  console.log(JSON.stringify(CTX))
 }
 const IO_ENDPOINT = CTX.IO_ENDPOINT
 const IO_PATH = CTX.IO_PATH || '/socket.io'
 const CLIENT_NUM = parseInt(CTX.CLIENT_NUM || '1', 10)
-const BATCH_SIZE = parseInt(CTX.BATCH_SIZE || CLIENT_NUM / 10, 10) || 1
+const BATCH_SIZE = parseInt(CTX.BATCH_SIZE || 200, 10) || 1
 const BATCH_DELAY = parseInt(CTX.BATCH_DELAY || '10000', 10)
 const COLOR = CTX.COLOR || 'blue'
 
-console.error({
+const PARAMETER = {
   IO_ENDPOINT,
   IO_PATH,
+  COLOR,
   CLIENT_NUM,
   BATCH_SIZE,
   BATCH_DELAY
-})
+}
+CTX = Object.assign(CTX, PARAMETER)
+console.error(PARAMETER)
 
 let logger, io, exit
-try {
+if (IS_NODE) {
   io = require('socket.io-client')
   exit = process.exit
 
@@ -44,7 +47,7 @@ try {
       console.error('using dev client blob')
     }
     const server = require('http').createServer((req, res) => {
-      if (req.url === '/index.html') {
+      if (req.url === '/index.html' || req.url === '/') {
         return res.end(`
 <html>
     <head>
@@ -97,7 +100,9 @@ try {
   } else {
     ready()
   }
-} catch (e) {
+} else {
+  window.location.hash = JSON.stringify(CTX)
+
   io = window.io
   exit = alert
 
