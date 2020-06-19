@@ -25,7 +25,7 @@ describe "PubSubRace", ->
 
 				(cb) =>
 					@clientA = RealTimeClient.connect()
-					@clientA.on "connect", cb
+					@clientA.on "connectionAccepted", cb
 
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
@@ -65,7 +65,7 @@ describe "PubSubRace", ->
 
 				(cb) =>
 					@clientA = RealTimeClient.connect()
-					@clientA.on "connect", cb
+					@clientA.on "connectionAccepted", cb
 
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
@@ -112,7 +112,7 @@ describe "PubSubRace", ->
 
 				(cb) =>
 					@clientA = RealTimeClient.connect()
-					@clientA.on "connect", cb
+					@clientA.on "connectionAccepted", cb
 
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
@@ -158,7 +158,7 @@ describe "PubSubRace", ->
 
 				(cb) =>
 					@clientA = RealTimeClient.connect()
-					@clientA.on "connect", cb
+					@clientA.on "connectionAccepted", cb
 
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
@@ -183,7 +183,7 @@ describe "PubSubRace", ->
 					#  - disconnect goes through one process.nextTick
 					# We have to inject the disconnect event into a different event loop
 					#  cycle.
-					, 3
+					, 2
 
 				(cb) =>
 					# wait for subscribe and unsubscribe

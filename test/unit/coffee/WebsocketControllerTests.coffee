@@ -181,7 +181,7 @@ describe 'WebsocketController', ->
 		describe "when the client did not joined a project yet", ->
 			beforeEach (done) ->
 				@client.ol_context = {}
-				@WebsocketController.leaveProject @io, @client, done
+				@WebsocketController.leaveProject @client, done
 
 			it "should bail out when calling leaveProject", () ->
 				@WebsocketLoadBalancer.emitToRoom.called.should.equal false
@@ -193,7 +193,7 @@ describe 'WebsocketController', ->
 
 		describe "when the project is empty", ->
 			beforeEach (done) ->
-				@WebsocketController.leaveProject @io, @client, done
+				@WebsocketController.leaveProject @client, done
 
 			it "should end clientTracking.clientDisconnected to the project room", ->
 				@WebsocketLoadBalancer.emitToRoom
@@ -221,7 +221,7 @@ describe 'WebsocketController', ->
 		describe "when the project is not empty", ->
 			beforeEach ->
 				@clientsInRoom.push("mock-remaining-client")
-				@WebsocketController.leaveProject @io, @client
+				@WebsocketController.leaveProject @client
 
 			it "should not flush the project in the document updater", ->
 				@DocumentUpdaterManager.flushProjectToMongoAndDelete
@@ -231,7 +231,7 @@ describe 'WebsocketController', ->
 			beforeEach (done) ->
 				@client.ol_context.user_id = null
 				@client.ol_context.project_id = null
-				@WebsocketController.leaveProject @io, @client, done
+				@WebsocketController.leaveProject @client, done
 
 			it "should not end clientTracking.clientDisconnected to the project room", ->
 				@WebsocketLoadBalancer.emitToRoom
@@ -255,7 +255,7 @@ describe 'WebsocketController', ->
 			beforeEach (done) ->
 				@client.ol_context.user_id = @user_id
 				@client.ol_context.project_id = null
-				@WebsocketController.leaveProject @io, @client, done
+				@WebsocketController.leaveProject @client, done
 
 			it "should not end clientTracking.clientDisconnected to the project room", ->
 				@WebsocketLoadBalancer.emitToRoom

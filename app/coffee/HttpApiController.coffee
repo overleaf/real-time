@@ -1,6 +1,7 @@
 WebsocketLoadBalancer = require "./WebsocketLoadBalancer"
 DrainManager = require "./DrainManager"
 logger = require "logger-sharelatex"
+{clientMap} = require("./WebsocketServer")
 
 module.exports = HttpApiController =
 	sendMessage: (req, res, next) ->
@@ -13,17 +14,15 @@ module.exports = HttpApiController =
 		res.send 204 # No content
 	
 	startDrain: (req, res, next) ->
-		io = req.app.get("io")
 		rate = req.query.rate or "4"
 		rate = parseFloat(rate) || 0
 		logger.log {rate}, "setting client drain rate"
-		DrainManager.startDrain io, rate
+		DrainManager.startDrain rate
 		res.send 204
 
 	disconnectClient: (req, res, next) ->
-		io = req.app.get("io")
 		client_id = req.params.client_id
-		client = io.sockets.connected[client_id]
+		client = clientMap.get(client_id)
 
 		if !client
 			logger.info({client_id}, "api: client already disconnected")

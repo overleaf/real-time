@@ -95,6 +95,12 @@ describe "joinProject", ->
 		before (done) ->
 			async.series [
 				(cb) =>
+					FixturesManager.setUpProject {
+						privilegeLevel: "owner"
+						project_id: 'rate-limited'
+					}, cb
+
+				(cb) =>
 					@client = RealTimeClient.connect()
 					@client.on "connectionAccepted", cb
 

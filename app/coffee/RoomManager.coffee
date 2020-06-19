@@ -5,6 +5,8 @@ metrics = require "metrics-sharelatex"
 IdMap = new Map() # keep track of whether ids are from projects or docs
 RoomEvents = new EventEmitter() # emits {project,doc}-active and {project,doc}-empty events
 
+RoomClients = new Map() # 'room' -> [clients...]
+
 # Manage socket.io rooms for individual projects and docs
 #
 # The first time someone joins a project or doc we emit a 'project-active' or
@@ -47,10 +49,10 @@ module.exports = RoomManager =
         return RoomEvents
 
     joinEntity: (client, entity, id, callback) ->
-      @_clientsInRoom client, id, (beforeCount) ->
+        beforeCount = @countClientsInRoom(id)
         # client joins room immediately but joinDoc request does not complete
         # until room is subscribed
-        client.join id
+        @_clientJoinRoom client, id
         # is this a new room? if so, subscribe
         if beforeCount == 0
             logger.log {entity, id}, "room is now active"
@@ -72,11 +74,11 @@ module.exports = RoomManager =
       # for old docs after a reconnection.
       # It can also happen when we process a join and disconnect event in the
       #  same event loop cycle.
-      if !@_clientAlreadyInRoom(client, id)
+        if !@_clientAlreadyInRoom(client, id)
           logger.log {client: client.id, entity, id}, "ignoring request from client to leave room it is not in"
           return
-      client.leave id
-      @_clientsInRoom client, id, (afterCount) ->
+        @_clientLeaveRoom client, id
+        afterCount = @countClientsInRoom(id)
         logger.log {client: client.id, entity, id, afterCount}, "client left room"
         # is the room now empty? if so, unsubscribe
         if !entity?
@@ -88,41 +90,36 @@ module.exports = RoomManager =
             IdMap.delete(id)
             metrics.gauge "room-listeners", RoomEvents.eventNames().length
 
-    _clientsInRoom: (client, room, cb) ->
-        cb(@getClientsInRoomSync(client.server, room).length)
+    _clientJoinRoom: (client, room) ->
+        client.rooms.push(room)
+        RoomClients.set(room, []) unless RoomClients.has(room)
+        RoomClients.get(room).push(client)
+
+    _clientLeaveRoom: (client, room) ->
+        client.rooms.splice(client.rooms.indexOf(room), 1)
+        clients = RoomClients.get(room)
+        clients.splice(clients.indexOf(client), 1)
+        if clients.length == 0
+            RoomClients.delete(room)
 
     _roomsClientIsIn: (client) ->
-        return @getRoomsClientIsInSync(client)
+        return client.rooms.slice()
 
     _clientAlreadyInRoom: (client, room) ->
-        return @getRoomsClientIsInSync(client).indexOf(room) != -1
+        return client.rooms.includes(room)
 
-    getClientsInRoomSync: (io, room) ->
-        # the implementation in socket.io-adapter is prone to race conditions:
-        # it passes the list of clients via process.nextTick, but given that
-        # NodeJS can process multiple network events in the same event loop
-        # cycle, multiple clients may seem to be the last in a room, but
-        # actually there are not -- some other client joined in the mean time.
-        # (mean time: calculating the list of clients and us receiving it)
-        adapter = io.sockets.adapter
-        return [] unless adapter.rooms.hasOwnProperty(room)
-        return Object.keys(adapter.rooms[room].sockets).filter((id) ->
-          return adapter.nsp.connected[id]
-        )
+    # UNSAFE: iterating over the client list returned from here is not safe
+    # e.g. calling .disconnect() on a list member will manipulate the list and
+    #       hence break the iterator.
+    _getClientsInRoomSyncUnsafe: (room) ->
+        return RoomClients.get(room) || []
+
+    countClientsInRoom: (room) ->
+        return RoomManager._getClientsInRoomSyncUnsafe(room).length
+        
+    getClientsInRoomSync: (room) ->
+        return RoomManager._getClientsInRoomSyncUnsafe(room).slice()
 
     # HACK: it calls the callback synchronously -- hence the name pseudoAsync
-    # calling it asynchronously would lead to race conditions -- see above
-    getClientsInRoomPseudoAsync: (io, room, cb) ->
-        cb(null, RoomManager.getClientsInRoomSync(io, room))
-
-    getRoomsClientIsInSync: (client) ->
-        # The implementation in socket.io is prone to race conditions:
-        # The adapter will get updated immediately from joining, but the
-        #  client local state (.rooms) is updated via process.nextTick.
-        # Given that NodeJS can process multiple network events in the same
-        #  event loop cycle, we can join a project and disconnect in the same
-        #  cycle. We would not pick up the room (we just joined) for leaving.
-        roomRegistry = client.server.sockets.adapter.sids
-        return [] unless roomRegistry.hasOwnProperty(client.id)
-        rooms = (room for room in Object.keys(roomRegistry[client.id]) when room isnt client.id)  # exclude the client socket entry
-        return rooms
+    getClientsInRoomPseudoAsync: (room, cb) ->
+        cb(null, RoomManager.getClientsInRoomSync(room))

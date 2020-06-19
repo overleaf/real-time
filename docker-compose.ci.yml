@@ -24,6 +24,7 @@ services:
       POSTGRES_HOST: postgres
       MOCHA_GREP: ${MOCHA_GREP}
       NODE_ENV: test
+      TRANSPORT: ${TRANSPORT}
     depends_on:
       redis:
         condition: service_healthy

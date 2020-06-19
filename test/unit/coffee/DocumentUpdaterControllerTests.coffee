@@ -31,6 +31,7 @@ describe "DocumentUpdaterController", ->
 			"metrics-sharelatex": @metrics = {inc: sinon.stub()}
 			"./RoomManager" : @RoomManager = { eventSource: sinon.stub().returns @RoomEvents}
 			"./ChannelManager": @ChannelManager = {}
+			"./WebsocketServer": {clientMap: @clientMap = new Map()}
 
 	describe "listenForUpdatesFromDocumentUpdater", ->
 		beforeEach ->
@@ -56,7 +57,7 @@ describe "DocumentUpdaterController", ->
 		describe "with bad JSON", ->
 			beforeEach ->
 				@SafeJsonParse.parse = sinon.stub().callsArgWith 1, new Error("oops")
-				@EditorUpdatesController._processMessageFromDocumentUpdater @io, "applied-ops", "blah"
+				@EditorUpdatesController._processMessageFromDocumentUpdater "applied-ops", "blah"
 
 			it "should log an error", ->
 				@logger.error.called.should.equal true
@@ -67,11 +68,11 @@ describe "DocumentUpdaterController", ->
 					doc_id: @doc_id
 					op: {t: "foo", p: 12}
 				@EditorUpdatesController._applyUpdateFromDocumentUpdater = sinon.stub()
-				@EditorUpdatesController._processMessageFromDocumentUpdater @io, "applied-ops", JSON.stringify(@message)
+				@EditorUpdatesController._processMessageFromDocumentUpdater "applied-ops", JSON.stringify(@message)
 
 			it "should apply the update", ->
 				@EditorUpdatesController._applyUpdateFromDocumentUpdater
-					.calledWith(@io, @doc_id, @message.op)
+					.calledWith(@doc_id, @message.op)
 					.should.equal true
 
 		describe "with error", ->
@@ -80,31 +81,29 @@ describe "DocumentUpdaterController", ->
 					doc_id: @doc_id
 					error: "Something went wrong"
 				@EditorUpdatesController._processErrorFromDocumentUpdater = sinon.stub()
-				@EditorUpdatesController._processMessageFromDocumentUpdater @io, "applied-ops", JSON.stringify(@message)
+				@EditorUpdatesController._processMessageFromDocumentUpdater "applied-ops", JSON.stringify(@message)
 
 			it "should process the error", ->
 				@EditorUpdatesController._processErrorFromDocumentUpdater
-					.calledWith(@io, @doc_id, @message.error)
+					.calledWith(@doc_id, @message.error)
 					.should.equal true
 
 	describe "_applyUpdateFromDocumentUpdater", ->
 		beforeEach ->
 			@sourceClient = new MockClient()
 			@otherClients = [new MockClient(), new MockClient()]
-			clients = {}
-			clients[@sourceClient.id] = @sourceClient
-			clients[@otherClients[0].id] = @otherClients[0]
-			clients[@otherClients[1].id] = @otherClients[1]
+			clients = [@sourceClient, @otherClients...]
+			clients.forEach (client) =>
+				@clientMap.set(client.id, client)
 			@update =
 				op: [ t: "foo", p: 12 ]
 				meta: source: @sourceClient.publicId
 				v: @version = 42
 				doc: @doc_id
-			@io.sockets = {connected: clients}
-			@RoomManager.getClientsInRoomSync = sinon.stub().returns(Object.keys(clients))
+			@RoomManager.getClientsInRoomSync = sinon.stub().returns(clients)
 		describe "normally", ->
 			beforeEach ->
-				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
+				@EditorUpdatesController._applyUpdateFromDocumentUpdater @doc_id, @update
 
 			it "should send a version bump to the source client", ->
 				@sourceClient.emit
@@ -121,7 +120,7 @@ describe "DocumentUpdaterController", ->
 		describe "from a remote client", ->
 			beforeEach ->
 				@update.meta.source = 'some-remote-client'
-				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
+				@EditorUpdatesController._applyUpdateFromDocumentUpdater @doc_id, @update
 
 			it "should emit to the clients connected to the document", ->
 				# this is misleading, they are not the actual source...
@@ -135,7 +134,7 @@ describe "DocumentUpdaterController", ->
 		describe "with a duplicate op", ->
 			beforeEach ->
 				@update.dup = true
-				@EditorUpdatesController._applyUpdateFromDocumentUpdater @io, @doc_id, @update
+				@EditorUpdatesController._applyUpdateFromDocumentUpdater @doc_id, @update
 
 			it "should send a version bump to the source client as usual", ->
 				@sourceClient.emit
@@ -149,19 +148,15 @@ describe "DocumentUpdaterController", ->
 	describe "_processErrorFromDocumentUpdater", ->
 		beforeEach ->
 			@clients = [new MockClient(), new MockClient()]
-			client_mapping = {}
-			client_mapping[@clients[0].id] = @clients[0]
-			client_mapping[@clients[1].id] = @clients[1]
-			@io.sockets = {connected: client_mapping}
-			@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(null, [@clients[0].id, @clients[1].id])
-			@EditorUpdatesController._processErrorFromDocumentUpdater @io, @doc_id, "Something went wrong"
+			@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(null, @clients)
+			@EditorUpdatesController._processErrorFromDocumentUpdater @doc_id, "Something went wrong"
 
 		it "should log a warning", ->
 			@logger.warn.called.should.equal true
 
 		it "should disconnect all clients in that document", ->
 			@RoomManager.getClientsInRoomPseudoAsync
-				.calledWith(@io, @doc_id)
+				.calledWith(@doc_id)
 				.should.equal true
 			for client in @clients
 				client.disconnect.called.should.equal true

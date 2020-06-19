@@ -2,6 +2,7 @@ SandboxedModule = require('sandboxed-module')
 sinon = require('sinon')
 require('chai').should()
 modulePath = require('path').join __dirname, '../../../app/js/WebsocketLoadBalancer'
+MockClient = require "./helpers/MockClient"
 
 describe "WebsocketLoadBalancer", ->
 	beforeEach ->
@@ -18,7 +19,7 @@ describe "WebsocketLoadBalancer", ->
 			"./RoomManager" : @RoomManager = {eventSource: sinon.stub().returns @RoomEvents}
 			"./ChannelManager": @ChannelManager = {publish: sinon.stub()}
 			"./ConnectedUsersManager": @ConnectedUsersManager = {refreshClient: sinon.stub()}
-		@io = {}
+			"./WebsocketServer": {clientMap: @clientMap = new Map()}
 		@WebsocketLoadBalancer.rclientPubList = [{publish: sinon.stub()}]
 		@WebsocketLoadBalancer.rclientSubList = [{
 			subscribe: sinon.stub()
@@ -72,90 +73,83 @@ describe "WebsocketLoadBalancer", ->
 			beforeEach ->
 				@isRestrictedUser = false
 				@SafeJsonParse.parse = sinon.stub().callsArgWith 1, new Error("oops")
-				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", "blah")
+				@WebsocketLoadBalancer._processEditorEvent("editor-events", "blah")
 
 			it "should log an error", ->
 				@logger.error.called.should.equal true
 
 		describe "with a designated room", ->
 			beforeEach ->
-				@io.sockets = {connected:
-					'client-id-1': {id: 'client-id-1', emit: @emit1 = sinon.stub(), ol_context: {}}
-					'client-id-2': {id: 'client-id-2', emit: @emit2 = sinon.stub(), ol_context: {}}
-				}
+				@clients = [new MockClient(), new MockClient()]
 				@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(
-					null, ['client-id-1', 'client-id-2']
+					null, @clients
 				)
 				data = JSON.stringify
 					room_id: @room_id
 					message: @message
 					payload: @payload
-				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
+				@WebsocketLoadBalancer._processEditorEvent("editor-events", data)
 
 			it "should send the message to all (unique) clients in the room", ->
 				@RoomManager.getClientsInRoomPseudoAsync
-					.calledWith(@io, @room_id)
+					.calledWith(@room_id)
 					.should.equal true
-				@emit1.calledWith(@message, @payload...).should.equal true
-				@emit2.calledWith(@message, @payload...).should.equal true
+				@clients[0].emit.calledWith(@message, @payload...).should.equal true
+				@clients[1].emit.calledWith(@message, @payload...).should.equal true
 
 		describe "with a designated room, and restricted clients, not restricted message", ->
 			beforeEach ->
-				@io.sockets = {connected:
-					'client-id-1': {id: 'client-id-1', emit: @emit1 = sinon.stub(), ol_context: {}}
-					'client-id-2': {id: 'client-id-2', emit: @emit2 = sinon.stub(), ol_context: {}}
-					'client-id-4': {id: 'client-id-4', emit: @emit4 = sinon.stub(), ol_context: {is_restricted_user: true}}
-				}
+				@clients = [new MockClient(), new MockClient(), new MockClient({is_restricted_user: true})]
 				@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(
-					null, ['client-id-1', 'client-id-2', 'client-id-4']
+					null, @clients
 				)
 				data = JSON.stringify
 					room_id: @room_id
 					message: @message
 					payload: @payload
-				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
+				@WebsocketLoadBalancer._processEditorEvent("editor-events", data)
 
 			it "should send the message to all (unique) clients in the room", ->
 				@RoomManager.getClientsInRoomPseudoAsync
-					.calledWith(@io, @room_id)
+					.calledWith(@room_id)
 					.should.equal true
-				@emit1.calledWith(@message, @payload...).should.equal true
-				@emit2.calledWith(@message, @payload...).should.equal true
-				@emit4.called.should.equal true  # restricted client, but should be called
+				@clients[0].emit.calledWith(@message, @payload...).should.equal true
+				@clients[1].emit.calledWith(@message, @payload...).should.equal true
+				@clients[2].emit.called.should.equal true  # restricted client, but should be called
 
 		describe "with a designated room, and restricted clients, restricted message", ->
 			beforeEach ->
-				@io.sockets = {connected:
-					'client-id-1': {id: 'client-id-1', emit: @emit1 = sinon.stub(), ol_context: {}}
-					'client-id-2': {id: 'client-id-2', emit: @emit2 = sinon.stub(), ol_context: {}}
-					'client-id-4': {id: 'client-id-4', emit: @emit4 = sinon.stub(), ol_context: {is_restricted_user: true}}
-				}
+				@clients = [new MockClient(), new MockClient(), new MockClient({is_restricted_user: true})]
 				@RoomManager.getClientsInRoomPseudoAsync = sinon.stub().yields(
-					null, ['client-id-1', 'client-id-2', 'client-id-4']
+					null, @clients
 				)
 				data = JSON.stringify
 					room_id: @room_id
 					message: @restrictedMessage = 'new-comment'
 					payload: @payload
-				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
+				@WebsocketLoadBalancer._processEditorEvent("editor-events", data)
 
 			it "should send the message to all (unique) clients in the room, who are not restricted", ->
 				@RoomManager.getClientsInRoomPseudoAsync
-					.calledWith(@io, @room_id)
+					.calledWith(@room_id)
 					.should.equal true
-				@emit1.calledWith(@restrictedMessage, @payload...).should.equal true
-				@emit2.calledWith(@restrictedMessage, @payload...).should.equal true
-				@emit4.called.should.equal false # restricted client, should not be called
+				@clients[0].emit.calledWith(@restrictedMessage, @payload...).should.equal true
+				@clients[1].emit.calledWith(@restrictedMessage, @payload...).should.equal true
+				@clients[2].emit.called.should.equal false # restricted client, should not be called
 
 		describe "when emitting to all", ->
 			beforeEach ->
-				@io.sockets =
-					emit: @emit = sinon.stub()
+				@clients = [new MockClient(), new MockClient({is_restricted_user: true})]
+				@clients.forEach (client) =>
+					@clientMap.set(client.id, client)
+
+			beforeEach ->
 				data = JSON.stringify
 					room_id: "all"
 					message: @message
 					payload: @payload
-				@WebsocketLoadBalancer._processEditorEvent(@io, "editor-events", data)
+				@WebsocketLoadBalancer._processEditorEvent("editor-events", data)
 
 			it "should send the message to all clients", ->
-				@emit.calledWith(@message, @payload...).should.equal true
+				@clients[0].emit.calledWith(@message, @payload...).should.equal true
+				@clients[1].emit.calledWith(@message, @payload...).should.equal true

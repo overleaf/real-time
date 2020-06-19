@@ -58,7 +58,7 @@ module.exports = WebsocketController =
 	# but we need to wait for the triggering client to disconnect. How long we wait
 	# is determined by FLUSH_IF_EMPTY_DELAY.
 	FLUSH_IF_EMPTY_DELAY: 500 #ms
-	leaveProject: (io, client, callback = (error) ->) ->
+	leaveProject: (client, callback = (error) ->) ->
 			{project_id, user_id} = client.ol_context
 			return callback() unless project_id # client did not join project
 
@@ -73,7 +73,7 @@ module.exports = WebsocketController =
 
 			RoomManager.leaveProjectAndDocs(client)
 			setTimeout () ->
-				RoomManager.getClientsInRoomPseudoAsync io, project_id, (error, remainingClients) ->
+				RoomManager.getClientsInRoomPseudoAsync project_id, (error, remainingClients) ->
 					if remainingClients.length == 0
 						# Flush project in the background
 						DocumentUpdaterManager.flushProjectToMongoAndDelete project_id, (err) ->

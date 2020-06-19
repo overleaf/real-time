@@ -6,6 +6,7 @@ HttpController = require "./HttpController"
 HttpApiController = require "./HttpApiController"
 bodyParser = require "body-parser"
 base64id = require("base64id")
+{clientMap, clientEmitter} = require("./WebsocketServer")
 
 basicAuth = require('basic-auth-connect')
 httpAuth = basicAuth (user, pass)->
@@ -43,8 +44,7 @@ module.exports = Router =
 		attrs = {arguments: args}
 		Router._handleError(callback, error, client, method, attrs)
 
-	configure: (app, io, session) ->
-		app.set("io", io)
+	configure: (app) ->
 		app.get "/clients", HttpController.getConnectedClients
 		app.get "/clients/:client_id", HttpController.getConnectedClient
 
@@ -53,7 +53,7 @@ module.exports = Router =
 		app.post "/drain", httpAuth, HttpApiController.startDrain
 		app.post "/client/:client_id/disconnect", httpAuth, HttpApiController.disconnectClient
 
-		session.on 'connection', (error, client, session) ->
+		clientEmitter.on 'client', (error, client, session, project_id) ->
 			# init client context, we may access it in Router._handleError before
 			#  setting any values
 			client.ol_context = {}
@@ -76,6 +76,11 @@ module.exports = Router =
 				client.disconnect()
 				return
 
+			if error and (error.message == 'missing bootstrap' or error.message == 'restart bootstrap')
+				client.emit("connectionRejected", {message: "retry", flushBootstrap: true})
+				client.disconnect()
+				return
+
 			if error?
 				logger.err err: error, client: client?, session: session?, "error when client connected"
 				client?.emit("connectionRejected", {message: "error"})
@@ -84,10 +89,10 @@ module.exports = Router =
 
 			# send positive confirmation that the client has a valid connection
 			client.publicId = 'P.' + base64id.generateId()
-			client.emit("connectionAccepted", null, client.publicId)
+			client.emit("connectionAccepted", null, client.publicId, client.id)
 
 			metrics.inc('socket-io.connection')
-			metrics.gauge('socket-io.clients', Object.keys(io.sockets.connected).length)
+			metrics.gauge('socket-io.clients', clientMap.size)
 
 			logger.log session: session, client_id: client.id, "client connected"
 
@@ -102,6 +107,12 @@ module.exports = Router =
 				if typeof callback != 'function'
 					return Router._handleInvalidArguments(client, 'joinProject', arguments)
 
+				if data and data.project_id isnt project_id
+					metrics.inc 'socket-io.security-violation', 1, {status: 'joinProject'}
+					callback({message: 'forbidden'})
+					client.disconnect()
+					return
+
 				if data.anonymousAccessToken
 					user.anonymousAccessToken = data.anonymousAccessToken
 				WebsocketController.joinProject client, user, data.project_id, (err, args...) ->
@@ -113,11 +124,11 @@ module.exports = Router =
 			client.on "disconnect", () ->
 				# This is called after leaving rooms.
 				metrics.inc('socket-io.disconnect')
-				metrics.gauge('socket-io.clients', Object.keys(io.sockets.connected).length)
+				metrics.gauge('socket-io.clients', clientMap.size)
 
 			client.on "disconnecting", () ->
 				# This is called just before leaving rooms.
-				WebsocketController.leaveProject io, client, (err) ->
+				WebsocketController.leaveProject client, (err) ->
 					if err?
 						Router._handleError (() ->), err, client, "leaveProject"
 

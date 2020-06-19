@@ -2,45 +2,27 @@ Metrics = require("metrics-sharelatex")
 Settings = require "settings-sharelatex"
 Metrics.initialize(Settings.appName or "real-time")
 async = require("async")
-_ = require "underscore"
 
 logger = require "logger-sharelatex"
 logger.initialize("real-time")
 Metrics.event_loop.monitor(logger)
 
 express = require("express")
-session = require("express-session")
 redis = require("redis-sharelatex")
 if Settings.sentry?.dsn?
 	logger.initializeErrorReporting(Settings.sentry.dsn)
 
-sessionRedisClient = redis.createClient(Settings.redis.websessions)
-
-RedisStore = require('connect-redis')(session)
-SessionSockets = require('session.socket.io')
-CookieParser = require("cookie-parser")
-
 DrainManager = require("./app/js/DrainManager")
 HealthCheckManager = require("./app/js/HealthCheckManager")
+WebsocketServer = require("./app/js/WebsocketServer")
+{clientMap} = WebsocketServer
 
 # Set up socket.io server
 app = express()
 
 server = require('http').createServer(app)
-io = require('socket.io')(server, {
-	path: Settings.socketIoPath,
-	cookie: false,
-	origins: Settings.socketIoOrigins,
-
-	# restore v0 default
-	pingTimeout: 60 * 1000,
-})
-
-# Bind to sessions
-sessionStore = new RedisStore(client: sessionRedisClient)
-cookieParser = CookieParser(Settings.security.sessionSecret)
-
-sessionSockets = new SessionSockets(io, sessionStore, cookieParser, Settings.cookieName)
+WebsocketServer.attachRoutes(app)
+WebsocketServer.attachServer(server)
 
 Metrics.injectMetricsRoute(app)
 app.use(Metrics.http.monitor(logger))
@@ -80,13 +62,13 @@ app.get "/health_check/redis", healthCheck
 
 
 Router = require "./app/js/Router"
-Router.configure(app, io, sessionSockets)
+Router.configure(app)
 
 WebsocketLoadBalancer = require "./app/js/WebsocketLoadBalancer"
-WebsocketLoadBalancer.listenForEditorEvents(io)
+WebsocketLoadBalancer.listenForEditorEvents()
 
 DocumentUpdaterController = require "./app/js/DocumentUpdaterController"
-DocumentUpdaterController.listenForUpdatesFromDocumentUpdater(io)
+DocumentUpdaterController.listenForUpdatesFromDocumentUpdater()
 
 port = Settings.internal.realTime.port
 host = Settings.internal.realTime.host
@@ -100,12 +82,11 @@ Error.stackTraceLimit = 10
 
 
 shutdownCleanly = (signal) ->
-	io.sockets.clients (error, connectedClients) ->
-		if connectedClients.length == 0
+		if clientMap.size == 0
 			logger.warn("no clients connected, exiting")
 			process.exit()
 		else
-			logger.warn {connectedClients}, "clients still connected, not shutting down yet"
+			logger.warn {connectedClients: Array.from(clientMap.keys())}, "clients still connected, not shutting down yet"
 			setTimeout () ->
 				shutdownCleanly(signal)
 			, 30 * 1000
@@ -121,7 +102,7 @@ drainAndShutdown = (signal) ->
 			logger.warn signal: signal, "received interrupt, delay drain by #{statusCheckInterval}ms"
 		setTimeout () ->
 			logger.warn signal: signal, "received interrupt, starting drain over #{shutdownDrainTimeWindow} mins"
-			DrainManager.startDrainTimeWindow(io, shutdownDrainTimeWindow)
+			DrainManager.startDrainTimeWindow(shutdownDrainTimeWindow)
 			shutdownCleanly(signal)
 		, statusCheckInterval
 

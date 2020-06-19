@@ -46,10 +46,12 @@ settings =
 			url: "http://#{process.env['DOCUMENT_UPDATER_HOST'] or process.env['DOCUPDATER_HOST'] or "localhost"}:3003"
 			
 	security:
+		bootstrapSecret: process.env.BOOTSTRAP_SECRET or "yet-another-secret"
+		pollingAuthSecret: process.env.POLLING_AUTH_SECRET or "the-another-secret"
 		sessionSecret: process.env['SESSION_SECRET'] or "secret-please-change"
 		
 	cookieName: process.env['COOKIE_NAME'] or "sharelatex.sid"
-	socketIoOrigins: process.env['SOCKET_IO_ORIGINS'] or '*:*'
+	socketIoOrigins: process.env['SOCKET_IO_ORIGINS'] or 'http://127.0.0.1:3026'
 	socketIoPath: process.env['SOCKET_IO_PATH'] or '/socket.io'
 	
 	max_doc_length: 2 * 1024 * 1024 # 2mb
@@ -69,6 +71,11 @@ settings =
 	publishOnIndividualChannels: process.env['PUBLISH_ON_INDIVIDUAL_CHANNELS'] or false
 
 	statusCheckInterval: parseInt(process.env['STATUS_CHECK_INTERVAL'] or '0')
+
+	longPollingTimeout: parseInt(process.env.LONG_POLLING_TIMEOUT or '45000', 10)
+	longPollingCleanupDelay: parseInt(process.env.LONG_POLLING_CLEANUP_DELAY or '30000', 10)
+	wsHealthCheckInterval: parseInt(process.env.WS_HEALTH_CHECK_INTERVAL or '20000', 10)
+	wsHealthCheckTimeout: parseInt(process.env.WS_HEALTH_CHECK_TIMEOUT or '45000', 10)
 
 	sentry:
 		dsn: process.env.SENTRY_DSN

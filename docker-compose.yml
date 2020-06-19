@@ -30,6 +30,7 @@ services:
       MOCHA_GREP: ${MOCHA_GREP}
       LOG_LEVEL: ERROR
       NODE_ENV: test
+      TRANSPORT: ${TRANSPORT}
     user: node
     depends_on:
       redis:

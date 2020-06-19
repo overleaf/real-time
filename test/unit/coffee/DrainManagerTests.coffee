@@ -8,24 +8,20 @@ describe "DrainManager", ->
 	beforeEach ->
 		@DrainManager = SandboxedModule.require modulePath, requires:
 			"logger-sharelatex": @logger = log: sinon.stub()
-		@io =
-			sockets:
-				connected: {}
+			"./WebsocketServer": {clientMap: @clientMap = new Map()}
 
 	describe "startDrainTimeWindow", ->
 		beforeEach ->
-			@clients = {}
 			for i in [0..5399]
-				@clients[i] = {
+				@clientMap.set(i, {
 					id: i
 					emit: sinon.stub()
-				}
-			@io.sockets.connected = @clients
+				})
 			@DrainManager.startDrain = sinon.stub()
 
 		it "should set a drain rate fast enough", (done)->
-			@DrainManager.startDrainTimeWindow(@io, 9)
-			@DrainManager.startDrain.calledWith(@io, 10).should.equal true
+			@DrainManager.startDrainTimeWindow(9)
+			@DrainManager.startDrain.calledWith(10).should.equal true
 			done()
 
 
@@ -33,15 +29,14 @@ describe "DrainManager", ->
 		beforeEach ->
 			@clients = {}
 			for i in [0..9]
-				@clients[i] = {
+				@clientMap.set(i, @clients[i] = {
 					id: i
 					emit: sinon.stub()
-				}
-			@io.sockets.connected = @clients
+				})
 
 		describe "after first pass", ->
 			beforeEach ->
-				@DrainManager.reconnectNClients(@io, 3)
+				@DrainManager.reconnectNClients(3)
 			
 			it "should reconnect the first 3 clients", ->
 				for i in [0..2]
@@ -53,7 +48,7 @@ describe "DrainManager", ->
 			
 			describe "after second pass", ->
 				beforeEach ->
-					@DrainManager.reconnectNClients(@io, 3)
+					@DrainManager.reconnectNClients(3)
 				
 				it "should reconnect the next 3 clients", ->
 					for i in [3..5]
@@ -69,7 +64,7 @@ describe "DrainManager", ->
 				
 				describe "after final pass", ->
 					beforeEach ->
-						@DrainManager.reconnectNClients(@io, 100)
+						@DrainManager.reconnectNClients(100)
 				
 					it "should not reconnect the first 6 clients again", ->
 						for i in [0..5]

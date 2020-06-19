@@ -7,6 +7,7 @@ HealthCheckManager = require "./HealthCheckManager"
 RoomManager = require "./RoomManager"
 ChannelManager = require "./ChannelManager"
 ConnectedUsersManager = require "./ConnectedUsersManager"
+{clientMap} = require("./WebsocketServer")
 
 RESTRICTED_USER_MESSAGE_TYPE_PASS_LIST = [
 	'connectionAccepted',
@@ -39,14 +40,14 @@ module.exports = WebsocketLoadBalancer =
 	emitToAll: (message, payload...) ->
 		@emitToRoom "all", message, payload...
 
-	listenForEditorEvents: (io) ->
+	listenForEditorEvents: () ->
 		logger.log {rclients: @rclientPubList.length}, "publishing editor events"
 		logger.log {rclients: @rclientSubList.length}, "listening for editor events"
 		for rclientSub in @rclientSubList
 			rclientSub.subscribe "editor-events"
 			rclientSub.on "message", (channel, message) ->
 				EventLogger.debugEvent(channel, message) if Settings.debugEvents > 0
-				WebsocketLoadBalancer._processEditorEvent io, channel, message
+				WebsocketLoadBalancer._processEditorEvent channel, message
 		@handleRoomUpdates(@rclientSubList)
 
 	handleRoomUpdates: (rclientSubList) ->
@@ -59,31 +60,31 @@ module.exports = WebsocketLoadBalancer =
 			for rclient in rclientSubList
 				ChannelManager.unsubscribe rclient, "editor-events", project_id
 
-	_processEditorEvent: (io, channel, message) ->
+	_processEditorEvent: (channel, message) ->
 		SafeJsonParse.parse message, (error, message) ->
 			if error?
 				logger.error {err: error, channel}, "error parsing JSON"
 				return
 			if message.room_id == "all"
-				io.sockets.emit(message.message, message.payload...)
+				clientMap.forEach (client) ->
+					client.emit(message.message, message.payload...)
 			else if message.message is 'clientTracking.refresh' && message.room_id?
-				clientList = RoomManager.getClientsInRoomSync(io, message.room_id)
-				logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id, socketIoClients: clientList}, "refreshing client list"
-				for client in clientList.map((id) -> io.sockets.connected[id])
+				clientList = RoomManager.getClientsInRoomSync(message.room_id)
+				logger.log {channel:channel, message: message.message, room_id: message.room_id, message_id: message._id}, "refreshing client list"
+				for client in clientList
 					ConnectedUsersManager.refreshClient(message.room_id, client.publicId)
 			else if message.room_id?
 				if message._id? && Settings.checkEventOrder
 					status = EventLogger.checkEventOrder("editor-events", message._id, message)
 					if status is "duplicate"
 						return # skip duplicate events
-				RoomManager.getClientsInRoomPseudoAsync io, message.room_id, (err, clientIds) ->
+				RoomManager.getClientsInRoomPseudoAsync message.room_id, (err, clients) ->
 					if err?
 						return logger.err {room: message.room_id, err}, "failed to get room clients"
 
 					is_restricted_message = message.message not in RESTRICTED_USER_MESSAGE_TYPE_PASS_LIST
 
-					clientList = clientIds
-					.map((id) -> io.sockets.connected[id])
+					clientList = clients
 					.filter((client) ->
 						!(is_restricted_message && client.ol_context['is_restricted_user'])
 					)
@@ -95,7 +96,7 @@ module.exports = WebsocketLoadBalancer =
 						message: message.message,
 						room_id: message.room_id,
 						message_id: message._id,
-						socketIoClients: clientIds
+						socketIoClients: clientList.map((client) -> client.id)
 					}, "distributing event to clients"
 					for client in clientList
 								client.emit(message.message, message.payload...)

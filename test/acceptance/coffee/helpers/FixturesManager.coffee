@@ -25,6 +25,8 @@ module.exports = FixturesManager =
 				}
 			}, (error) =>
 				throw error if error?
+				RealTimeClient.project_id = project_id
+				RealTimeClient.regenerateBootstrap()
 				callback null, {project_id, user_id, privilegeLevel, project}
 				
 	setUpDoc: (project_id, options = {}, callback = (error, data) ->) ->

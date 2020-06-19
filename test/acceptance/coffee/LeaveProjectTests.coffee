@@ -60,7 +60,7 @@ describe "leaveProject", ->
 					
 				(cb) =>
 					# The API waits a little while before flushing changes
-					setTimeout done, 1000
+					setTimeout cb, 1000
 					
 			], done
 
@@ -106,7 +106,7 @@ describe "leaveProject", ->
 					
 				(cb) =>
 					@clientA = RealTimeClient.connect()
-					@clientA.on "connect", cb
+					@clientA.on "connectionAccepted", cb
 						
 				(cb) =>
 					@clientA.emit "joinProject", project_id: @project_id, (error, @project, @privilegeLevel, @protocolVersion) =>
@@ -125,7 +125,7 @@ describe "leaveProject", ->
 					
 				(cb) =>
 					# The API waits a little while before flushing changes
-					setTimeout done, 1000
+					setTimeout cb, 1000
 			], done
 
 		it "should flush the project to the document updater", ->

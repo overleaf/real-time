@@ -1,12 +1,13 @@
 logger = require "logger-sharelatex"
+{clientMap} = require("./WebsocketServer")
 
 module.exports = DrainManager =
 
-	startDrainTimeWindow: (io, minsToDrain)->
-		drainPerMin = Object.keys(io.sockets.connected).length / minsToDrain
-		DrainManager.startDrain(io, Math.max(drainPerMin / 60, 4)) # enforce minimum drain rate
+	startDrainTimeWindow: (minsToDrain)->
+		drainPerMin = clientMap.size / minsToDrain
+		DrainManager.startDrain(Math.max(drainPerMin / 60, 4)) # enforce minimum drain rate
 
-	startDrain: (io, rate) ->
+	startDrain: (rate) ->
 		# Clear out any old interval
 		clearInterval @interval
 		logger.log  rate: rate, "starting drain"
@@ -20,13 +21,13 @@ module.exports = DrainManager =
 		else
 			pollingInterval = 1000
 		@interval = setInterval () =>
-			@reconnectNClients(io, rate)
+			@reconnectNClients(rate)
 		, pollingInterval
 
 	RECONNECTED_CLIENTS: {}
-	reconnectNClients: (io, N) ->
+	reconnectNClients: (N) ->
 		drainedCount = 0
-		for client in Object.values(io.sockets.connected)
+		for client in Array.from(clientMap.values())
 			if !@RECONNECTED_CLIENTS[client.id]
 				@RECONNECTED_CLIENTS[client.id] = true
 				logger.log {client_id: client.id}, "Asking client to reconnect gracefully"
