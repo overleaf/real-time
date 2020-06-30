@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
@@ -122,10 +121,9 @@ module.exports = Router = {
       }
 
       if (
-        client != null &&
-        __guard__(error != null ? error.message : undefined, (x) =>
-          x.match(/could not look up session by key/)
-        )
+        client &&
+        error &&
+        error.message.match(/could not look up session by key/)
       ) {
         logger.warn(
           { err: error, client: client != null, session: session != null },
@@ -156,19 +154,11 @@ module.exports = Router = {
       client.emit('connectionAccepted', null, client.publicId)
 
       metrics.inc('socket-io.connection')
-      metrics.gauge(
-        'socket-io.clients',
-        __guard__(io.sockets.clients(), (x1) => x1.length)
-      )
+      metrics.gauge('socket-io.clients', io.sockets.clients().length)
 
       logger.log({ session, client_id: client.id }, 'client connected')
 
-      if (
-        __guard__(
-          session != null ? session.passport : undefined,
-          (x2) => x2.user
-        ) != null
-      ) {
+      if (session && session.passport && session.passport.user) {
         ;({ user } = session.passport)
       } else if ((session != null ? session.user : undefined) != null) {
         ;({ user } = session)
@@ -210,10 +200,7 @@ module.exports = Router = {
 
       client.on('disconnect', function () {
         metrics.inc('socket-io.disconnect')
-        metrics.gauge(
-          'socket-io.clients',
-          __guard__(io.sockets.clients(), (x3) => x3.length) - 1
-        )
+        metrics.gauge('socket-io.clients', io.sockets.clients().length)
 
         WebsocketController.leaveProject(io, client, function (err) {
           if (err != null) {
@@ -365,10 +352,4 @@ module.exports = Router = {
       })
     })
   }
-}
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null
-    ? transform(value)
-    : undefined
 }
