@@ -18,13 +18,11 @@ module.exports = DocumentUpdaterController = {
   rclientList: RedisClientManager.createClientList(settings.redis.pubsub),
 
   listenForUpdatesFromDocumentUpdater(io) {
-    let i, rclient
     logger.log(
       { rclients: this.rclientList.length },
       'listening for applied-ops events'
     )
-    for (i = 0; i < this.rclientList.length; i++) {
-      rclient = this.rclientList[i]
+    for (const rclient of this.rclientList) {
       rclient.subscribe('applied-ops')
       rclient.on('message', function (channel, message) {
         metrics.inc('rclient', 0.001) // global event rate metric
@@ -40,12 +38,11 @@ module.exports = DocumentUpdaterController = {
     }
     // create metrics for each redis instance only when we have multiple redis clients
     if (this.rclientList.length > 1) {
-      for (i = 0; i < this.rclientList.length; i++) {
-        rclient = this.rclientList[i]
+      this.rclientList.forEach((rclient, i) => {
         // per client event rate metric
         const metricName = `rclient-${i}`
         rclient.on('message', () => metrics.inc(metricName, 0.001))
-      }
+      })
     }
     this.handleRoomUpdates(this.rclientList)
   },
