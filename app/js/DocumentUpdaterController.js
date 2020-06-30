@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS205: Consider reworking code to avoid use of IIFEs
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
@@ -50,9 +49,9 @@ module.exports = DocumentUpdaterController = {
     if (this.rclientList.length > 1) {
       for (i = 0; i < this.rclientList.length; i++) {
         rclient = this.rclientList[i]
-        ;((
-          i // per client event rate metric
-        ) => rclient.on('message', () => metrics.inc(`rclient-${i}`, 0.001)))(i)
+        // per client event rate metric
+        const metricName = `rclient-${i}`
+        rclient.on('message', () => metrics.inc(metricName, 0.001))
       }
     }
     this.handleRoomUpdates(this.rclientList)
@@ -128,13 +127,7 @@ module.exports = DocumentUpdaterController = {
         doc_id,
         version: update.v,
         source: update.meta != null ? update.meta.source : undefined,
-        socketIoClients: (() => {
-          const result = []
-          for (client of clientList) {
-            result.push(client.id)
-          }
-          return result
-        })()
+        socketIoClients: clientList.map((client) => client.id)
       },
       'distributing updates to clients'
     )
@@ -173,13 +166,7 @@ module.exports = DocumentUpdaterController = {
       logger.log(
         {
           doc_id,
-          socketIoClients: (() => {
-            const result1 = []
-            for (client of clientList) {
-              result1.push(client.id)
-            }
-            return result1
-          })()
+          socketIoClients: clientList.map((client) => client.id)
         },
         'discarded duplicate clients'
       )
@@ -187,17 +174,13 @@ module.exports = DocumentUpdaterController = {
   },
 
   _processErrorFromDocumentUpdater(io, doc_id, error, message) {
-    (() => {
-      const result = []
-      for (const client of io.sockets.clients(doc_id)) {
-        logger.warn(
-          { err: error, doc_id, client_id: client.id },
-          'error from document updater, disconnecting client'
-        )
-        client.emit('otUpdateError', error, message)
-        result.push(client.disconnect())
-      }
-      return result
-    })()
+    for (const client of io.sockets.clients(doc_id)) {
+      logger.warn(
+        { err: error, doc_id, client_id: client.id },
+        'error from document updater, disconnecting client'
+      )
+      client.emit('otUpdateError', error, message)
+      client.disconnect()
+    }
   }
 }
