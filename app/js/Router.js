@@ -1,6 +1,5 @@
 /* eslint-disable
     camelcase,
-    standard/no-callback-literal,
 */
 // TODO: This file was created by bulk-decaffeinate.
 // Fix any style issues and re-enable lint.
@@ -45,13 +44,15 @@ module.exports = Router = {
     attrs.err = error
     if (error.name === 'CodedError') {
       logger.warn(attrs, error.message, { code: error.code })
-      return callback({ message: error.message, code: error.code })
+      const serializedError = { message: error.message, code: error.code }
+      return callback(serializedError)
     }
     if (error.message === 'unexpected arguments') {
       // the payload might be very large, put it on level info
       logger.log(attrs, 'unexpected arguments')
       metrics.inc('unexpected-arguments', 1, { status: method })
-      return callback({ message: error.message })
+      const serializedError = { message: error.message }
+      return callback(serializedError)
     }
     if (
       [
@@ -61,11 +62,15 @@ module.exports = Router = {
       ].includes(error.message)
     ) {
       logger.warn(attrs, error.message)
-      return callback({ message: error.message })
+      const serializedError = { message: error.message }
+      return callback(serializedError)
     } else {
       logger.error(attrs, `server side error in ${method}`)
       // Don't return raw error to prevent leaking server side info
-      return callback({ message: 'Something went wrong in real-time service' })
+      const serializedError = {
+        message: 'Something went wrong in real-time service'
+      }
+      return callback(serializedError)
     }
   },
 
