@@ -261,7 +261,7 @@ module.exports = WebsocketController = {
               }
             }
 
-            AuthorizationManager.addAccessToDoc(client, doc_id)
+            AuthorizationManager.addAccessToDoc(client, doc_id, () => {})
             logger.log(
               {
                 user_id,
