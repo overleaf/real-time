@@ -1,7 +1,6 @@
 /* eslint-disable
     camelcase,
 */
-let DocumentUpdaterController
 const logger = require('logger-sharelatex')
 const settings = require('settings-sharelatex')
 const RedisClientManager = require('./RedisClientManager')
@@ -12,6 +11,7 @@ const RoomManager = require('./RoomManager')
 const ChannelManager = require('./ChannelManager')
 const metrics = require('metrics-sharelatex')
 
+let DocumentUpdaterController
 module.exports = DocumentUpdaterController = {
   // DocumentUpdaterController is responsible for updates that come via Redis
   // Pub/Sub from the document updater.
