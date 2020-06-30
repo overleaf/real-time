@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
  * DS103: Rewrite code to no longer use __guard__
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
@@ -44,16 +43,14 @@ module.exports = Router = {
     if (error.name === 'CodedError') {
       logger.warn(attrs, error.message, { code: error.code })
       const serializedError = { message: error.message, code: error.code }
-      return callback(serializedError)
-    }
-    if (error.message === 'unexpected arguments') {
+      callback(serializedError)
+    } else if (error.message === 'unexpected arguments') {
       // the payload might be very large, put it on level info
       logger.log(attrs, 'unexpected arguments')
       metrics.inc('unexpected-arguments', 1, { status: method })
       const serializedError = { message: error.message }
-      return callback(serializedError)
-    }
-    if (
+      callback(serializedError)
+    } else if (
       [
         'not authorized',
         'doc updater could not load requested ops',
@@ -62,14 +59,14 @@ module.exports = Router = {
     ) {
       logger.warn(attrs, error.message)
       const serializedError = { message: error.message }
-      return callback(serializedError)
+      callback(serializedError)
     } else {
       logger.error(attrs, `server side error in ${method}`)
       // Don't return raw error to prevent leaking server side info
       const serializedError = {
         message: 'Something went wrong in real-time service'
       }
-      return callback(serializedError)
+      callback(serializedError)
     }
   },
 
@@ -80,7 +77,7 @@ module.exports = Router = {
       callback = function () {}
     }
     const attrs = { arguments: args }
-    return Router._handleError(callback, error, client, method, attrs)
+    Router._handleError(callback, error, client, method, attrs)
   },
 
   configure(app, io, session) {
@@ -102,7 +99,7 @@ module.exports = Router = {
       HttpApiController.disconnectClient
     )
 
-    return session.on('connection', function (error, client, session) {
+    session.on('connection', function (error, client, session) {
       // init client context, we may access it in Router._handleError before
       //  setting any values
       let user
@@ -113,7 +110,7 @@ module.exports = Router = {
           logger.err({ clientErr: err }, 'socket.io client error')
           if (client.connected) {
             client.emit('reconnectGracefully')
-            return client.disconnect()
+            client.disconnect()
           }
         })
       }
@@ -194,18 +191,18 @@ module.exports = Router = {
         if (data.anonymousAccessToken) {
           user.anonymousAccessToken = data.anonymousAccessToken
         }
-        return WebsocketController.joinProject(
+        WebsocketController.joinProject(
           client,
           user,
           data.project_id,
           function (err, ...args) {
             if (err != null) {
-              return Router._handleError(callback, err, client, 'joinProject', {
+              Router._handleError(callback, err, client, 'joinProject', {
                 project_id: data.project_id,
                 user_id: user != null ? user.id : undefined
               })
             } else {
-              return callback(null, ...args)
+              callback(null, ...args)
             }
           }
         )
@@ -218,14 +215,9 @@ module.exports = Router = {
           __guard__(io.sockets.clients(), (x3) => x3.length) - 1
         )
 
-        return WebsocketController.leaveProject(io, client, function (err) {
+        WebsocketController.leaveProject(io, client, function (err) {
           if (err != null) {
-            return Router._handleError(
-              function () {},
-              err,
-              client,
-              'leaveProject'
-            )
+            Router._handleError(function () {}, err, client, 'leaveProject')
           }
         })
       })
@@ -263,19 +255,19 @@ module.exports = Router = {
           return Router._handleInvalidArguments(client, 'joinDoc', arguments)
         }
 
-        return WebsocketController.joinDoc(
+        WebsocketController.joinDoc(
           client,
           doc_id,
           fromVersion,
           options,
           function (err, ...args) {
             if (err != null) {
-              return Router._handleError(callback, err, client, 'joinDoc', {
+              Router._handleError(callback, err, client, 'joinDoc', {
                 doc_id,
                 fromVersion
               })
             } else {
-              return callback(null, ...args)
+              callback(null, ...args)
             }
           }
         )
@@ -286,14 +278,11 @@ module.exports = Router = {
           return Router._handleInvalidArguments(client, 'leaveDoc', arguments)
         }
 
-        return WebsocketController.leaveDoc(client, doc_id, function (
-          err,
-          ...args
-        ) {
+        WebsocketController.leaveDoc(client, doc_id, function (err, ...args) {
           if (err != null) {
-            return Router._handleError(callback, err, client, 'leaveDoc')
+            Router._handleError(callback, err, client, 'leaveDoc')
           } else {
-            return callback(null, ...args)
+            callback(null, ...args)
           }
         })
       })
@@ -307,19 +296,16 @@ module.exports = Router = {
           )
         }
 
-        return WebsocketController.getConnectedUsers(client, function (
-          err,
-          users
-        ) {
+        WebsocketController.getConnectedUsers(client, function (err, users) {
           if (err != null) {
-            return Router._handleError(
+            Router._handleError(
               callback,
               err,
               client,
               'clientTracking.getConnectedUsers'
             )
           } else {
-            return callback(null, users)
+            callback(null, users)
           }
         })
       })
@@ -339,25 +325,23 @@ module.exports = Router = {
           )
         }
 
-        return WebsocketController.updateClientPosition(
-          client,
-          cursorData,
-          function (err) {
-            if (err != null) {
-              return Router._handleError(
-                callback,
-                err,
-                client,
-                'clientTracking.updatePosition'
-              )
-            } else {
-              return callback()
-            }
+        WebsocketController.updateClientPosition(client, cursorData, function (
+          err
+        ) {
+          if (err != null) {
+            Router._handleError(
+              callback,
+              err,
+              client,
+              'clientTracking.updatePosition'
+            )
+          } else {
+            callback()
           }
-        )
+        })
       })
 
-      return client.on('applyOtUpdate', function (doc_id, update, callback) {
+      client.on('applyOtUpdate', function (doc_id, update, callback) {
         if (typeof callback !== 'function') {
           return Router._handleInvalidArguments(
             client,
@@ -366,24 +350,18 @@ module.exports = Router = {
           )
         }
 
-        return WebsocketController.applyOtUpdate(
-          client,
-          doc_id,
-          update,
-          function (err) {
-            if (err != null) {
-              return Router._handleError(
-                callback,
-                err,
-                client,
-                'applyOtUpdate',
-                { doc_id, update }
-              )
-            } else {
-              return callback()
-            }
+        WebsocketController.applyOtUpdate(client, doc_id, update, function (
+          err
+        ) {
+          if (err != null) {
+            Router._handleError(callback, err, client, 'applyOtUpdate', {
+              doc_id,
+              update
+            })
+          } else {
+            callback()
           }
-        )
+        })
       })
     })
   }
