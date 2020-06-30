@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
@@ -29,7 +28,7 @@ module.exports = AuthorizationManager = {
   },
 
   _assertClientHasPrivilegeLevel(client, allowedLevels, callback) {
-    if (Array.from(allowedLevels).includes(client.ol_context.privilege_level)) {
+    if (allowedLevels.includes(client.ol_context.privilege_level)) {
       return callback(null)
     } else {
       return callback(new Error('not authorized'))
