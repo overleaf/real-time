@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
@@ -40,7 +39,7 @@ module.exports = DocumentUpdaterController = {
         if (settings.debugEvents > 0) {
           EventLogger.debugEvent(channel, message)
         }
-        return DocumentUpdaterController._processMessageFromDocumentUpdater(
+        DocumentUpdaterController._processMessageFromDocumentUpdater(
           io,
           channel,
           message
@@ -56,7 +55,7 @@ module.exports = DocumentUpdaterController = {
         ) => rclient.on('message', () => metrics.inc(`rclient-${i}`, 0.001)))(i)
       }
     }
-    return this.handleRoomUpdates(this.rclientList)
+    this.handleRoomUpdates(this.rclientList)
   },
 
   handleRoomUpdates(rclientSubList) {
@@ -65,12 +64,12 @@ module.exports = DocumentUpdaterController = {
       const subscribePromises = rclientSubList.map((rclient) =>
         ChannelManager.subscribe(rclient, 'applied-ops', doc_id)
       )
-      return RoomManager.emitOnCompletion(
+      RoomManager.emitOnCompletion(
         subscribePromises,
         `doc-subscribed-${doc_id}`
       )
     })
-    return roomEvents.on('doc-empty', (doc_id) =>
+    roomEvents.on('doc-empty', (doc_id) =>
       rclientSubList.map((rclient) =>
         ChannelManager.unsubscribe(rclient, 'applied-ops', doc_id)
       )
@@ -78,7 +77,7 @@ module.exports = DocumentUpdaterController = {
   },
 
   _processMessageFromDocumentUpdater(io, channel, message) {
-    return SafeJsonParse.parse(message, function (error, message) {
+    SafeJsonParse.parse(message, function (error, message) {
       if (error != null) {
         logger.error({ err: error, channel }, 'error parsing JSON')
         return
@@ -94,13 +93,13 @@ module.exports = DocumentUpdaterController = {
             return // skip duplicate events
           }
         }
-        return DocumentUpdaterController._applyUpdateFromDocumentUpdater(
+        DocumentUpdaterController._applyUpdateFromDocumentUpdater(
           io,
           message.doc_id,
           message.op
         )
       } else if (message.error != null) {
-        return DocumentUpdaterController._processErrorFromDocumentUpdater(
+        DocumentUpdaterController._processErrorFromDocumentUpdater(
           io,
           message.doc_id,
           message.error,
@@ -111,7 +110,7 @@ module.exports = DocumentUpdaterController = {
           { message },
           'got health check message in applied ops channel'
         )
-        return HealthCheckManager.check(channel, message.key)
+        HealthCheckManager.check(channel, message.key)
       }
     })
   },
@@ -171,7 +170,7 @@ module.exports = DocumentUpdaterController = {
     }
     if (Object.keys(seen).length < clientList.length) {
       metrics.inc('socket-io.duplicate-clients', 0.1)
-      return logger.log(
+      logger.log(
         {
           doc_id,
           socketIoClients: (() => {
@@ -188,7 +187,7 @@ module.exports = DocumentUpdaterController = {
   },
 
   _processErrorFromDocumentUpdater(io, doc_id, error, message) {
-    return (() => {
+    (() => {
       const result = []
       for (const client of io.sockets.clients(doc_id)) {
         logger.warn(
