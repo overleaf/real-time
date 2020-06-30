@@ -1,7 +1,6 @@
 /* eslint-disable
     camelcase,
 */
-let Router
 const metrics = require('metrics-sharelatex')
 const logger = require('logger-sharelatex')
 const settings = require('settings-sharelatex')
@@ -22,6 +21,7 @@ const httpAuth = basicAuth(function (user, pass) {
   return isValid
 })
 
+let Router
 module.exports = Router = {
   _handleError(callback, error, client, method, attrs) {
     attrs = attrs || {}
@@ -92,7 +92,6 @@ module.exports = Router = {
     session.on('connection', function (error, client, session) {
       // init client context, we may access it in Router._handleError before
       //  setting any values
-      let user
       client.ol_context = {}
 
       if (client) {
@@ -149,6 +148,7 @@ module.exports = Router = {
 
       logger.log({ session, client_id: client.id }, 'client connected')
 
+      let user
       if (session && session.passport && session.passport.user) {
         ;({ user } = session.passport)
       } else if (session && session.user) {
