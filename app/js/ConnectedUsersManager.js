@@ -1,13 +1,6 @@
 /* eslint-disable
     camelcase,
 */
-// TODO: This file was created by bulk-decaffeinate.
-// Fix any style issues and re-enable lint.
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 const async = require('async')
 const Settings = require('settings-sharelatex')
 const logger = require('logger-sharelatex')
@@ -60,7 +53,7 @@ module.exports = {
       user.email || ''
     )
 
-    if (cursorData != null) {
+    if (cursorData) {
       multi.hset(
         Keys.connectedUser({ project_id, client_id }),
         'cursorData',
@@ -73,7 +66,7 @@ module.exports = {
     )
 
     multi.exec(function (err) {
-      if (err != null) {
+      if (err) {
         logger.err(
           { err, project_id, client_id },
           'problem marking user as connected'
@@ -96,7 +89,7 @@ module.exports = {
       USER_TIMEOUT_IN_S
     )
     multi.exec(function (err) {
-      if (err != null) {
+      if (err) {
         logger.err(
           { err, project_id, client_id },
           'problem refreshing connected client'
@@ -119,11 +112,7 @@ module.exports = {
       err,
       result
     ) {
-      if (
-        result == null ||
-        Object.keys(result).length === 0 ||
-        !result.user_id
-      ) {
+      if (!(result && result.user_id)) {
         result = {
           connected: false,
           client_id
@@ -133,7 +122,7 @@ module.exports = {
         result.client_id = client_id
         result.client_age =
           (Date.now() - parseInt(result.last_updated_at, 10)) / 1000
-        if (result.cursorData != null) {
+        if (result.cursorData) {
           try {
             result.cursorData = JSON.parse(result.cursorData)
           } catch (e) {
@@ -160,23 +149,19 @@ module.exports = {
       err,
       results
     ) {
-      if (err != null) {
+      if (err) {
         return callback(err)
       }
       const jobs = results.map((client_id) => (cb) =>
         self._getConnectedUser(project_id, client_id, cb)
       )
       async.series(jobs, function (err, users) {
-        if (users == null) {
-          users = []
-        }
-        if (err != null) {
+        if (err) {
           return callback(err)
         }
         users = users.filter(
           (user) =>
-            (user != null ? user.connected : undefined) &&
-            (user != null ? user.client_age : undefined) < REFRESH_TIMEOUT_IN_S
+            user && user.connected && user.client_age < REFRESH_TIMEOUT_IN_S
         )
         callback(null, users)
       })
