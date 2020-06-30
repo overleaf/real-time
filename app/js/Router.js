@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS103: Rewrite code to no longer use __guard__
  * DS207: Consider shorter variations of null checks
@@ -206,7 +205,7 @@ module.exports = Router = {
                 user_id: user != null ? user.id : undefined
               })
             } else {
-              return callback(null, ...Array.from(args))
+              return callback(null, ...args)
             }
           }
         )
@@ -276,7 +275,7 @@ module.exports = Router = {
                 fromVersion
               })
             } else {
-              return callback(null, ...Array.from(args))
+              return callback(null, ...args)
             }
           }
         )
@@ -294,7 +293,7 @@ module.exports = Router = {
           if (err != null) {
             return Router._handleError(callback, err, client, 'leaveDoc')
           } else {
-            return callback(null, ...Array.from(args))
+            return callback(null, ...args)
           }
         })
       })
