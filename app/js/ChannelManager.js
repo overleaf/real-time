@@ -40,7 +40,10 @@ module.exports = {
     }
 
     const pendingActions = clientChannelMap.get(channel) || Promise.resolve()
-    var subscribePromise = pendingActions.then(actualSubscribe, actualSubscribe)
+    const subscribePromise = pendingActions.then(
+      actualSubscribe,
+      actualSubscribe
+    )
     clientChannelMap.set(channel, subscribePromise)
     logger.log({ channel }, 'planned to subscribe to channel')
     return subscribePromise
@@ -51,7 +54,7 @@ module.exports = {
     const channel = `${baseChannel}:${id}`
     const actualUnsubscribe = function () {
       // unsubscribe is happening in the background, it should not reject
-      const p = rclient
+      return rclient
         .unsubscribe(channel)
         .finally(function () {
           if (clientChannelMap.get(channel) === unsubscribePromise) {
@@ -66,11 +69,10 @@ module.exports = {
           logger.error({ channel, err }, 'unsubscribed from channel')
           metrics.inc(`unsubscribe.failed.${baseChannel}`)
         })
-      return p
     }
 
     const pendingActions = clientChannelMap.get(channel) || Promise.resolve()
-    var unsubscribePromise = pendingActions.then(
+    const unsubscribePromise = pendingActions.then(
       actualUnsubscribe,
       actualUnsubscribe
     )
