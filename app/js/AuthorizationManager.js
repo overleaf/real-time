@@ -1,13 +1,6 @@
 /* eslint-disable
     camelcase,
 */
-// TODO: This file was created by bulk-decaffeinate.
-// Fix any style issues and re-enable lint.
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 let AuthorizationManager
 module.exports = AuthorizationManager = {
   assertClientCanViewProject(client, callback) {
@@ -36,7 +29,7 @@ module.exports = AuthorizationManager = {
 
   assertClientCanViewProjectAndDoc(client, doc_id, callback) {
     AuthorizationManager.assertClientCanViewProject(client, function (error) {
-      if (error != null) {
+      if (error) {
         return callback(error)
       }
       AuthorizationManager._assertClientCanAccessDoc(client, doc_id, callback)
@@ -45,7 +38,7 @@ module.exports = AuthorizationManager = {
 
   assertClientCanEditProjectAndDoc(client, doc_id, callback) {
     AuthorizationManager.assertClientCanEditProject(client, function (error) {
-      if (error != null) {
+      if (error) {
         return callback(error)
       }
       AuthorizationManager._assertClientCanAccessDoc(client, doc_id, callback)
