@@ -1,13 +1,6 @@
 /* eslint-disable
     camelcase,
 */
-// TODO: This file was created by bulk-decaffeinate.
-// Fix any style issues and re-enable lint.
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 let DocumentUpdaterController
 const logger = require('logger-sharelatex')
 const settings = require('settings-sharelatex')
@@ -77,12 +70,12 @@ module.exports = DocumentUpdaterController = {
 
   _processMessageFromDocumentUpdater(io, channel, message) {
     SafeJsonParse.parse(message, function (error, message) {
-      if (error != null) {
+      if (error) {
         logger.error({ err: error, channel }, 'error parsing JSON')
         return
       }
-      if (message.op != null) {
-        if (message._id != null && settings.checkEventOrder) {
+      if (message.op) {
+        if (message._id && settings.checkEventOrder) {
           const status = EventLogger.checkEventOrder(
             'applied-ops',
             message._id,
@@ -97,14 +90,14 @@ module.exports = DocumentUpdaterController = {
           message.doc_id,
           message.op
         )
-      } else if (message.error != null) {
+      } else if (message.error) {
         DocumentUpdaterController._processErrorFromDocumentUpdater(
           io,
           message.doc_id,
           message.error,
           message
         )
-      } else if (message.health_check != null) {
+      } else if (message.health_check) {
         logger.debug(
           { message },
           'got health check message in applied ops channel'
@@ -126,7 +119,7 @@ module.exports = DocumentUpdaterController = {
       {
         doc_id,
         version: update.v,
-        source: update.meta != null ? update.meta.source : undefined,
+        source: update.meta && update.meta.source,
         socketIoClients: clientList.map((client) => client.id)
       },
       'distributing updates to clients'
@@ -141,7 +134,7 @@ module.exports = DocumentUpdaterController = {
             {
               doc_id,
               version: update.v,
-              source: update.meta != null ? update.meta.source : undefined
+              source: update.meta.source
             },
             'distributing update to sender'
           )
@@ -152,7 +145,7 @@ module.exports = DocumentUpdaterController = {
             {
               doc_id,
               version: update.v,
-              source: update.meta != null ? update.meta.source : undefined,
+              source: update.meta.source,
               client_id: client.id
             },
             'distributing update to collaborator'
