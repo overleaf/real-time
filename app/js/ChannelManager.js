@@ -1,10 +1,3 @@
-// TODO: This file was created by bulk-decaffeinate.
-// Fix any style issues and re-enable lint.
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 const logger = require('logger-sharelatex')
 const metrics = require('metrics-sharelatex')
 const settings = require('settings-sharelatex')
@@ -32,16 +25,16 @@ module.exports = {
       const p = rclient.subscribe(channel)
       p.finally(function () {
         if (clientChannelMap.get(channel) === subscribePromise) {
-          return clientChannelMap.delete(channel)
+          clientChannelMap.delete(channel)
         }
       })
         .then(function () {
           logger.log({ channel }, 'subscribed to channel')
-          return metrics.inc(`subscribe.${baseChannel}`)
+          metrics.inc(`subscribe.${baseChannel}`)
         })
         .catch(function (err) {
           logger.error({ channel, err }, 'failed to subscribe to channel')
-          return metrics.inc(`subscribe.failed.${baseChannel}`)
+          metrics.inc(`subscribe.failed.${baseChannel}`)
         })
       return p
     }
@@ -62,16 +55,16 @@ module.exports = {
         .unsubscribe(channel)
         .finally(function () {
           if (clientChannelMap.get(channel) === unsubscribePromise) {
-            return clientChannelMap.delete(channel)
+            clientChannelMap.delete(channel)
           }
         })
         .then(function () {
           logger.log({ channel }, 'unsubscribed from channel')
-          return metrics.inc(`unsubscribe.${baseChannel}`)
+          metrics.inc(`unsubscribe.${baseChannel}`)
         })
         .catch(function (err) {
           logger.error({ channel, err }, 'unsubscribed from channel')
-          return metrics.inc(`unsubscribe.failed.${baseChannel}`)
+          metrics.inc(`unsubscribe.failed.${baseChannel}`)
         })
       return p
     }
@@ -96,6 +89,6 @@ module.exports = {
     }
     // we publish on a different client to the subscribe, so we can't
     // check for the channel existing here
-    return rclient.publish(channel, data)
+    rclient.publish(channel, data)
   }
 }
