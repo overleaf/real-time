@@ -1,6 +1,5 @@
 /* eslint-disable
     camelcase,
-    handle-callback-err,
 */
 // TODO: This file was created by bulk-decaffeinate.
 // Fix any style issues and re-enable lint.
@@ -29,9 +28,6 @@ module.exports = {
   // update. This way we don't care if the connected_user key has expired when
   // we receive a cursor update.
   updateUserPosition(project_id, client_id, user, cursorData, callback) {
-    if (callback == null) {
-      callback = function (err) {}
-    }
     logger.log({ project_id, client_id }, 'marking user as joined or connected')
 
     const multi = rclient.multi()
@@ -88,10 +84,7 @@ module.exports = {
     })
   },
 
-  refreshClient(project_id, client_id, callback) {
-    if (callback == null) {
-      callback = function (err) {}
-    }
+  refreshClient(project_id, client_id) {
     logger.log({ project_id, client_id }, 'refreshing connected client')
     const multi = rclient.multi()
     multi.hset(
@@ -110,7 +103,6 @@ module.exports = {
           'problem refreshing connected client'
         )
       }
-      return callback(err)
     })
   },
 
