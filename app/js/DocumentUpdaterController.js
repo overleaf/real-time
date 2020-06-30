@@ -1,6 +1,5 @@
 /* eslint-disable
     camelcase,
-    no-unused-vars,
 */
 // TODO: This file was created by bulk-decaffeinate.
 // Fix any style issues and re-enable lint.
@@ -22,8 +21,6 @@ const HealthCheckManager = require('./HealthCheckManager')
 const RoomManager = require('./RoomManager')
 const ChannelManager = require('./ChannelManager')
 const metrics = require('metrics-sharelatex')
-
-const MESSAGE_SIZE_LOG_LIMIT = 1024 * 1024 // 1Mb
 
 module.exports = DocumentUpdaterController = {
   // DocumentUpdaterController is responsible for updates that come via Redis
