@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
@@ -73,14 +72,14 @@ module.exports = {
       USER_TIMEOUT_IN_S
     )
 
-    return multi.exec(function (err) {
+    multi.exec(function (err) {
       if (err != null) {
         logger.err(
           { err, project_id, client_id },
           'problem marking user as connected'
         )
       }
-      return callback(err)
+      callback(err)
     })
   },
 
@@ -96,7 +95,7 @@ module.exports = {
       Keys.connectedUser({ project_id, client_id }),
       USER_TIMEOUT_IN_S
     )
-    return multi.exec(function (err) {
+    multi.exec(function (err) {
       if (err != null) {
         logger.err(
           { err, project_id, client_id },
@@ -112,52 +111,52 @@ module.exports = {
     multi.srem(Keys.clientsInProject({ project_id }), client_id)
     multi.expire(Keys.clientsInProject({ project_id }), FOUR_DAYS_IN_S)
     multi.del(Keys.connectedUser({ project_id, client_id }))
-    return multi.exec(callback)
+    multi.exec(callback)
   },
 
   _getConnectedUser(project_id, client_id, callback) {
-    return rclient.hgetall(
-      Keys.connectedUser({ project_id, client_id }),
-      function (err, result) {
-        if (
-          result == null ||
-          Object.keys(result).length === 0 ||
-          !result.user_id
-        ) {
-          result = {
-            connected: false,
-            client_id
-          }
-        } else {
-          result.connected = true
-          result.client_id = client_id
-          result.client_age =
-            (Date.now() - parseInt(result.last_updated_at, 10)) / 1000
-          if (result.cursorData != null) {
-            try {
-              result.cursorData = JSON.parse(result.cursorData)
-            } catch (e) {
-              logger.error(
-                {
-                  err: e,
-                  project_id,
-                  client_id,
-                  cursorData: result.cursorData
-                },
-                'error parsing cursorData JSON'
-              )
-              return callback(e)
-            }
+    rclient.hgetall(Keys.connectedUser({ project_id, client_id }), function (
+      err,
+      result
+    ) {
+      if (
+        result == null ||
+        Object.keys(result).length === 0 ||
+        !result.user_id
+      ) {
+        result = {
+          connected: false,
+          client_id
+        }
+      } else {
+        result.connected = true
+        result.client_id = client_id
+        result.client_age =
+          (Date.now() - parseInt(result.last_updated_at, 10)) / 1000
+        if (result.cursorData != null) {
+          try {
+            result.cursorData = JSON.parse(result.cursorData)
+          } catch (e) {
+            logger.error(
+              {
+                err: e,
+                project_id,
+                client_id,
+                cursorData: result.cursorData
+              },
+              'error parsing cursorData JSON'
+            )
+            return callback(e)
           }
         }
-        return callback(err, result)
       }
-    )
+      callback(err, result)
+    })
   },
 
   getConnectedUsers(project_id, callback) {
     const self = this
-    return rclient.smembers(Keys.clientsInProject({ project_id }), function (
+    rclient.smembers(Keys.clientsInProject({ project_id }), function (
       err,
       results
     ) {
@@ -167,7 +166,7 @@ module.exports = {
       const jobs = results.map((client_id) => (cb) =>
         self._getConnectedUser(project_id, client_id, cb)
       )
-      return async.series(jobs, function (err, users) {
+      async.series(jobs, function (err, users) {
         if (users == null) {
           users = []
         }
@@ -179,7 +178,7 @@ module.exports = {
             (user != null ? user.connected : undefined) &&
             (user != null ? user.client_age : undefined) < REFRESH_TIMEOUT_IN_S
         )
-        return callback(null, users)
+        callback(null, users)
       })
     })
   }
