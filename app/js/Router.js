@@ -1,6 +1,5 @@
 /* eslint-disable
     camelcase,
-    handle-callback-err,
     standard/no-callback-literal,
 */
 // TODO: This file was created by bulk-decaffeinate.
@@ -36,9 +35,6 @@ const httpAuth = basicAuth(function (user, pass) {
 
 module.exports = Router = {
   _handleError(callback, error, client, method, attrs) {
-    if (callback == null) {
-      callback = function (error) {}
-    }
     if (attrs == null) {
       attrs = {}
     }
@@ -299,9 +295,6 @@ module.exports = Router = {
       })
 
       client.on('clientTracking.getConnectedUsers', function (callback) {
-        if (callback == null) {
-          callback = function (error, users) {}
-        }
         if (typeof callback !== 'function') {
           return Router._handleInvalidArguments(
             client,
@@ -332,7 +325,7 @@ module.exports = Router = {
         callback
       ) {
         if (callback == null) {
-          callback = function (error) {}
+          callback = function () {}
         }
         if (typeof callback !== 'function') {
           return Router._handleInvalidArguments(
@@ -361,9 +354,6 @@ module.exports = Router = {
       })
 
       return client.on('applyOtUpdate', function (doc_id, update, callback) {
-        if (callback == null) {
-          callback = function (error) {}
-        }
         if (typeof callback !== 'function') {
           return Router._handleInvalidArguments(
             client,
