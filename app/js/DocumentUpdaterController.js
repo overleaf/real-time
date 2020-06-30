@@ -5,7 +5,6 @@
 // Fix any style issues and re-enable lint.
 /*
  * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
  * DS207: Consider shorter variations of null checks
@@ -63,7 +62,7 @@ module.exports = DocumentUpdaterController = {
   handleRoomUpdates(rclientSubList) {
     const roomEvents = RoomManager.eventSource()
     roomEvents.on('doc-active', function (doc_id) {
-      const subscribePromises = Array.from(rclientSubList).map((rclient) =>
+      const subscribePromises = rclientSubList.map((rclient) =>
         ChannelManager.subscribe(rclient, 'applied-ops', doc_id)
       )
       return RoomManager.emitOnCompletion(
@@ -72,7 +71,7 @@ module.exports = DocumentUpdaterController = {
       )
     })
     return roomEvents.on('doc-empty', (doc_id) =>
-      Array.from(rclientSubList).map((rclient) =>
+      rclientSubList.map((rclient) =>
         ChannelManager.unsubscribe(rclient, 'applied-ops', doc_id)
       )
     )
@@ -132,7 +131,7 @@ module.exports = DocumentUpdaterController = {
         source: update.meta != null ? update.meta.source : undefined,
         socketIoClients: (() => {
           const result = []
-          for (client of Array.from(clientList)) {
+          for (client of clientList) {
             result.push(client.id)
           }
           return result
@@ -142,7 +141,7 @@ module.exports = DocumentUpdaterController = {
     )
     const seen = {}
     // send messages only to unique clients (due to duplicate entries in io.sockets.clients)
-    for (client of Array.from(clientList)) {
+    for (client of clientList) {
       if (!seen[client.id]) {
         seen[client.id] = true
         if (client.publicId === update.meta.source) {
@@ -177,7 +176,7 @@ module.exports = DocumentUpdaterController = {
           doc_id,
           socketIoClients: (() => {
             const result1 = []
-            for (client of Array.from(clientList)) {
+            for (client of clientList) {
               result1.push(client.id)
             }
             return result1
@@ -191,7 +190,7 @@ module.exports = DocumentUpdaterController = {
   _processErrorFromDocumentUpdater(io, doc_id, error, message) {
     return (() => {
       const result = []
-      for (const client of Array.from(io.sockets.clients(doc_id))) {
+      for (const client of io.sockets.clients(doc_id)) {
         logger.warn(
           { err: error, doc_id, client_id: client.id },
           'error from document updater, disconnecting client'
