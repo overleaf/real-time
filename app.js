@@ -66,9 +66,9 @@ io.configure(function () {
   io.set('log level', 1)
 })
 
-app.get('/', (req, res, next) => res.send('real-time-sharelatex is alive'))
+app.get('/', (req, res) => res.send('real-time-sharelatex is alive'))
 
-app.get('/status', function (req, res, next) {
+app.get('/status', function (req, res) {
   if (Settings.shutDownInProgress) {
     res.send(503) // Service unavailable
   } else {
@@ -76,7 +76,7 @@ app.get('/status', function (req, res, next) {
   }
 })
 
-app.get('/debug/events', function (req, res, next) {
+app.get('/debug/events', function (req, res) {
   Settings.debugEvents = parseInt(req.query.count, 10) || 20
   logger.log({ count: Settings.debugEvents }, 'starting debug mode')
   res.send(`debug mode will log next ${Settings.debugEvents} events`)
@@ -86,7 +86,7 @@ const rclient = require('redis-sharelatex').createClient(
   Settings.redis.realtime
 )
 
-function healthCheck(req, res, next) {
+function healthCheck(req, res) {
   rclient.healthCheck(function (error) {
     if (error) {
       logger.err({ err: error }, 'failed redis health check')
