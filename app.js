@@ -1,6 +1,5 @@
 /*
  * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
  * DS103: Rewrite code to no longer use __guard__
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
@@ -70,16 +69,16 @@ io.configure(function () {
     'xhr-polling',
     'jsonp-polling'
   ])
-  return io.set('log level', 1)
+  io.set('log level', 1)
 })
 
 app.get('/', (req, res, next) => res.send('real-time-sharelatex is alive'))
 
 app.get('/status', function (req, res, next) {
   if (Settings.shutDownInProgress) {
-    return res.send(503) // Service unavailable
+    res.send(503) // Service unavailable
   } else {
-    return res.send('real-time-sharelatex is alive')
+    res.send('real-time-sharelatex is alive')
   }
 })
 
@@ -87,7 +86,7 @@ app.get('/debug/events', function (req, res, next) {
   Settings.debugEvents =
     parseInt(req.query != null ? req.query.count : undefined, 10) || 20
   logger.log({ count: Settings.debugEvents }, 'starting debug mode')
-  return res.send(`debug mode will log next ${Settings.debugEvents} events`)
+  res.send(`debug mode will log next ${Settings.debugEvents} events`)
 })
 
 const rclient = require('redis-sharelatex').createClient(
@@ -98,13 +97,13 @@ const healthCheck = (req, res, next) =>
   rclient.healthCheck(function (error) {
     if (error != null) {
       logger.err({ err: error }, 'failed redis health check')
-      return res.sendStatus(500)
+      res.sendStatus(500)
     } else if (HealthCheckManager.isFailing()) {
       const status = HealthCheckManager.status()
       logger.err({ pubSubErrors: status }, 'failed pubsub health check')
-      return res.sendStatus(500)
+      res.sendStatus(500)
     } else {
-      return res.sendStatus(200)
+      res.sendStatus(200)
     }
   })
 
@@ -128,7 +127,7 @@ server.listen(port, host, function (error) {
   if (error != null) {
     throw error
   }
-  return logger.info(`realtime starting up, listening on ${host}:${port}`)
+  logger.info(`realtime starting up, listening on ${host}:${port}`)
 })
 
 // Stop huge stack traces in logs from all the socket.io parsing steps.
@@ -138,13 +137,13 @@ var shutdownCleanly = function (signal) {
   const connectedClients = __guard__(io.sockets.clients(), (x) => x.length)
   if (connectedClients === 0) {
     logger.warn('no clients connected, exiting')
-    return process.exit()
+    process.exit()
   } else {
     logger.warn(
       { connectedClients },
       'clients still connected, not shutting down yet'
     )
-    return setTimeout(() => shutdownCleanly(signal), 30 * 1000)
+    setTimeout(() => shutdownCleanly(signal), 30 * 1000)
   }
 }
 
@@ -160,13 +159,13 @@ const drainAndShutdown = function (signal) {
         `received interrupt, delay drain by ${statusCheckInterval}ms`
       )
     }
-    return setTimeout(function () {
+    setTimeout(function () {
       logger.warn(
         { signal },
         `received interrupt, starting drain over ${shutdownDrainTimeWindow} mins`
       )
       DrainManager.startDrainTimeWindow(io, shutdownDrainTimeWindow)
-      return shutdownCleanly(signal)
+      shutdownCleanly(signal)
     }, statusCheckInterval)
   }
 }
@@ -206,7 +205,7 @@ if (Settings.shutdownDrainTimeWindow != null) {
           ? Settings.errors.shutdownOnUncaughtError
           : undefined
       ) {
-        return drainAndShutdown('SIGABRT')
+        drainAndShutdown('SIGABRT')
       }
     })
   }
@@ -227,13 +226,13 @@ if (Settings.continualPubsubTraffic) {
       date: new Date().toString()
     })
     Metrics.summary(`redis.publish.${channel}`, json.length)
-    return pubsubClient.publish(channel, json, function (err) {
+    pubsubClient.publish(channel, json, function (err) {
       if (err != null) {
         logger.err({ err, channel }, 'error publishing pubsub traffic to redis')
       }
       const blob = JSON.stringify({ keep: 'alive' })
       Metrics.summary('redis.publish.cluster-continual-traffic', blob.length)
-      return clusterClient.publish('cluster-continual-traffic', blob, callback)
+      clusterClient.publish('cluster-continual-traffic', blob, callback)
     })
   }
 
