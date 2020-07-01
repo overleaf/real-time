@@ -86,7 +86,7 @@ const rclient = require('redis-sharelatex').createClient(
   Settings.redis.realtime
 )
 
-const healthCheck = (req, res, next) =>
+function healthCheck(req, res, next) {
   rclient.healthCheck(function (error) {
     if (error) {
       logger.err({ err: error }, 'failed redis health check')
@@ -99,7 +99,7 @@ const healthCheck = (req, res, next) =>
       res.sendStatus(200)
     }
   })
-
+}
 app.get('/health_check', healthCheck)
 
 app.get('/health_check/redis', healthCheck)
@@ -126,7 +126,7 @@ server.listen(port, host, function (error) {
 // Stop huge stack traces in logs from all the socket.io parsing steps.
 Error.stackTraceLimit = 10
 
-var shutdownCleanly = function (signal) {
+function shutdownCleanly(signal) {
   const connectedClients = io.sockets.clients().length
   if (connectedClients === 0) {
     logger.warn('no clients connected, exiting')
@@ -140,7 +140,7 @@ var shutdownCleanly = function (signal) {
   }
 }
 
-const drainAndShutdown = function (signal) {
+function drainAndShutdown(signal) {
   if (Settings.shutDownInProgress) {
     logger.warn({ signal }, 'shutdown already in progress, ignoring signal')
   } else {
@@ -223,7 +223,7 @@ if (Settings.continualPubsubTraffic) {
     })
   }
 
-  var runPubSubTraffic = () =>
+  const runPubSubTraffic = () =>
     async.map(['applied-ops', 'editor-events'], publishJob, () =>
       setTimeout(runPubSubTraffic, 1000 * 20)
     )
