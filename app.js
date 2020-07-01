@@ -164,8 +164,8 @@ function drainAndShutdown(signal) {
 }
 
 Settings.shutDownInProgress = false
+const shutdownDrainTimeWindow = parseInt(Settings.shutdownDrainTimeWindow, 10)
 if (Settings.shutdownDrainTimeWindow) {
-  var shutdownDrainTimeWindow = parseInt(Settings.shutdownDrainTimeWindow, 10)
   logger.log({ shutdownDrainTimeWindow }, 'shutdownDrainTimeWindow enabled')
   for (const signal of [
     'SIGINT',
