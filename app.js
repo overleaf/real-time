@@ -1,6 +1,5 @@
 /*
  * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
  * DS207: Consider shorter variations of null checks
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
@@ -134,7 +133,7 @@ server.listen(port, host, function (error) {
 Error.stackTraceLimit = 10
 
 var shutdownCleanly = function (signal) {
-  const connectedClients = __guard__(io.sockets.clients(), (x) => x.length)
+  const connectedClients = io.sockets.clients().length
   if (connectedClients === 0) {
     logger.warn('no clients connected, exiting')
     process.exit()
@@ -242,10 +241,4 @@ if (Settings.continualPubsubTraffic) {
     )
 
   runPubSubTraffic()
-}
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null
-    ? transform(value)
-    : undefined
 }
