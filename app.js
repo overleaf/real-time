@@ -1,8 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 const Metrics = require('metrics-sharelatex')
 const Settings = require('settings-sharelatex')
 Metrics.initialize(Settings.appName || 'real-time')
@@ -15,7 +10,7 @@ Metrics.event_loop.monitor(logger)
 const express = require('express')
 const session = require('express-session')
 const redis = require('redis-sharelatex')
-if ((Settings.sentry != null ? Settings.sentry.dsn : undefined) != null) {
+if (Settings.sentry && Settings.sentry.dsn) {
   logger.initializeErrorReporting(Settings.sentry.dsn)
 }
 
@@ -82,8 +77,7 @@ app.get('/status', function (req, res, next) {
 })
 
 app.get('/debug/events', function (req, res, next) {
-  Settings.debugEvents =
-    parseInt(req.query != null ? req.query.count : undefined, 10) || 20
+  Settings.debugEvents = parseInt(req.query.count, 10) || 20
   logger.log({ count: Settings.debugEvents }, 'starting debug mode')
   res.send(`debug mode will log next ${Settings.debugEvents} events`)
 })
@@ -94,7 +88,7 @@ const rclient = require('redis-sharelatex').createClient(
 
 const healthCheck = (req, res, next) =>
   rclient.healthCheck(function (error) {
-    if (error != null) {
+    if (error) {
       logger.err({ err: error }, 'failed redis health check')
       res.sendStatus(500)
     } else if (HealthCheckManager.isFailing()) {
@@ -123,7 +117,7 @@ const { port } = Settings.internal.realTime
 const { host } = Settings.internal.realTime
 
 server.listen(port, host, function (error) {
-  if (error != null) {
+  if (error) {
     throw error
   }
   logger.info(`realtime starting up, listening on ${host}:${port}`)
@@ -170,7 +164,7 @@ const drainAndShutdown = function (signal) {
 }
 
 Settings.shutDownInProgress = false
-if (Settings.shutdownDrainTimeWindow != null) {
+if (Settings.shutdownDrainTimeWindow) {
   var shutdownDrainTimeWindow = parseInt(Settings.shutdownDrainTimeWindow, 10)
   logger.log({ shutdownDrainTimeWindow }, 'shutdownDrainTimeWindow enabled')
   for (const signal of [
@@ -186,9 +180,7 @@ if (Settings.shutdownDrainTimeWindow != null) {
   } // signal is passed as argument to event handler
 
   // global exception handler
-  if (
-    Settings.errors != null ? Settings.errors.catchUncaughtErrors : undefined
-  ) {
+  if (Settings.errors && Settings.errors.catchUncaughtErrors) {
     process.removeAllListeners('uncaughtException')
     process.on('uncaughtException', function (error) {
       if (['EPIPE', 'ECONNRESET'].includes(error.code)) {
@@ -199,11 +191,7 @@ if (Settings.shutdownDrainTimeWindow != null) {
         )
       }
       logger.error({ err: error }, 'uncaught exception')
-      if (
-        Settings.errors != null
-          ? Settings.errors.shutdownOnUncaughtError
-          : undefined
-      ) {
+      if (Settings.errors && Settings.errors.shutdownOnUncaughtError) {
         drainAndShutdown('SIGABRT')
       }
     })
@@ -226,7 +214,7 @@ if (Settings.continualPubsubTraffic) {
     })
     Metrics.summary(`redis.publish.${channel}`, json.length)
     pubsubClient.publish(channel, json, function (err) {
-      if (err != null) {
+      if (err) {
         logger.err({ err, channel }, 'error publishing pubsub traffic to redis')
       }
       const blob = JSON.stringify({ keep: 'alive' })
