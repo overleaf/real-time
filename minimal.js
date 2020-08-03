@@ -134,6 +134,12 @@ app.get('/health_check', healthCheck)
 
 app.get('/health_check/redis', healthCheck)
 
+const FAVICON_DATA = require('fs').readFileSync('./favicon.ico')
+app.get('/favicon.ico', function (req, res) {
+  res.setHeader('Content-Type', 'image/x-icon')
+  res.send(FAVICON_DATA)
+})
+
 Settings.minimalRealTimePort =
   Settings.minimalRealTimePort ||
   parseInt(process.env.MINIMAL_REAL_TIME_PORT) ||
