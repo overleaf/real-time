@@ -133,6 +133,7 @@ const DocumentUpdaterManager = {
         return callback(error)
       }
       const queueKey = DocumentUpdaterManager._getPendingUpdateListKey()
+      logger.error({ queueKey, range: settings.pendingUpdateListShardCount })
       rclient.rpush(queueKey, doc_key, function (error) {
         if (error) {
           error = new OError('error pushing doc_id into redis')
