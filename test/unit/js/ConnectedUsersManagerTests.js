@@ -195,11 +195,8 @@ describe('ConnectedUsersManager', function () {
         this.rClient.expire
           .withArgs(`clients_in_project:${this.project_id}`)
           .yields(null)
-        this.rClient.hset
-          .withArgs(
-            `connected_user:${this.project_id}:${this.client_id}`,
-            'user'
-          )
+        this.rClient.expire
+          .withArgs(`connected_user:${this.project_id}:${this.client_id}`)
           .yields(null)
         this.ConnectedUsersManager.updateUserPosition(
           this.project_id,
@@ -230,6 +227,34 @@ describe('ConnectedUsersManager', function () {
             done()
           }
         )
+      })
+
+      it('should not update user details', function (done) {
+        this.ConnectedUsersManager.updateUserPosition(
+          this.project_id,
+          this.client,
+          this.user,
+          null,
+          (err) => {
+            this.rClient.hset
+              .calledWith(
+                `connected_user:${this.project_id}:${this.client_id}`,
+                'user',
+                this.userSerialized
+              )
+              .should.equal(false)
+            done()
+          }
+        )
+      })
+    })
+
+    describe('when recently refreshed', function () {
+      beforeEach(function () {
+        this.rClient.expire
+          .withArgs(`connected_user:${this.project_id}:${this.client_id}`)
+          .yields(null)
+        this.ConnectedUsersManager.refreshClient(this.project_id, this.client)
       })
 
       it('should not update user details', function (done) {

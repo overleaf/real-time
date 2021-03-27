@@ -11,9 +11,62 @@ const Keys = Settings.redis.realtime.key_schema
 
 const ONE_HOUR_IN_S = 60 * 60
 const ONE_DAY_IN_S = ONE_HOUR_IN_S * 24
+const THREE_DAYS_IN_S = ONE_DAY_IN_S * 3
 const FOUR_DAYS_IN_S = ONE_DAY_IN_S * 4
 
 const USER_TIMEOUT_IN_S = ONE_HOUR_IN_S / 4
+
+let MAX_NETWORK_LATENCY_IN_S = 1
+const MAX_NETWORK_LATENCY_LIMIT_IN_S = 60
+function updateNetworkLatency(oldNowInSeconds) {
+  const nowInSeconds = Date.now() / 1000
+  const lastLatency = nowInSeconds - oldNowInSeconds
+
+  // Limit the accumulated maximum latency
+  MAX_NETWORK_LATENCY_IN_S = Math.min(
+    MAX_NETWORK_LATENCY_LIMIT_IN_S,
+    Math.max(MAX_NETWORK_LATENCY_IN_S, lastLatency)
+  )
+}
+
+function getEffectiveTTLInS(expiresAt) {
+  if (!expiresAt) {
+    // not set yet
+    return 0
+  }
+  const nowInSeconds = Date.now() / 1000
+  const ttl = expiresAt - nowInSeconds
+  if (ttl < MAX_NETWORK_LATENCY_IN_S) {
+    return 0
+  }
+  return ttl
+}
+
+function trackKeyExpiry(client, field, ttlInSeconds) {
+  const nowBeforeSendingInSeconds = Date.now() / 1000
+
+  function updateInternalTTL() {
+    updateNetworkLatency(nowBeforeSendingInSeconds)
+    client.ol_context[field] = nowBeforeSendingInSeconds + ttlInSeconds
+  }
+  const ttl = getEffectiveTTLInS(client.ol_context[field])
+  return { ttl, updateInternalTTL }
+}
+
+function trackClientsInProjectTTL(client) {
+  const {
+    ttl: clientsInProjectTTL,
+    updateInternalTTL: updateInternalTTLForClientsInProject
+  } = trackKeyExpiry(client, 'clientsInProjectExpiry', FOUR_DAYS_IN_S)
+  return { clientsInProjectTTL, updateInternalTTLForClientsInProject }
+}
+function trackConnectedUserTTL(client) {
+  const {
+    ttl: connectedUserTTL,
+    updateInternalTTL: updateInternalTTLForConnectedUser
+  } = trackKeyExpiry(client, 'connectedUserExpiry', USER_TIMEOUT_IN_S)
+  return { connectedUserTTL, updateInternalTTLForConnectedUser }
+}
 
 module.exports = {
   // Use the same method for when a user connects, and when a user sends a cursor
@@ -31,17 +84,16 @@ module.exports = {
     //     impacting any consistency requirements
     const multi = rclient.pipeline()
 
-    const nowInSeconds = Date.now() / 1000
     const {
-      clientsInProjectUpdatedAt,
-      connectedUserUpdatedAt
-    } = client.ol_context
-    const secondsSinceClientsInProjectUpdated =
-      nowInSeconds - (clientsInProjectUpdatedAt || 0)
-    const secondsSinceConnectedUserUpdated =
-      nowInSeconds - (connectedUserUpdatedAt || 0)
+      clientsInProjectTTL,
+      updateInternalTTLForClientsInProject
+    } = trackClientsInProjectTTL(client)
+    const {
+      connectedUserTTL,
+      updateInternalTTLForConnectedUser
+    } = trackConnectedUserTTL(client)
 
-    if (secondsSinceClientsInProjectUpdated > ONE_DAY_IN_S) {
+    if (clientsInProjectTTL < THREE_DAYS_IN_S) {
       // Effectively lower expiry to three days without activity of ANY client.
       multi.sadd(Keys.clientsInProject({ project_id }), client_id)
       multi.expire(
@@ -49,13 +101,14 @@ module.exports = {
         FOUR_DAYS_IN_S,
         (err) => {
           if (!err) {
-            client.ol_context.clientsInProjectUpdatedAt = nowInSeconds
+            updateInternalTTLForClientsInProject()
           }
         }
       )
     }
 
-    if (secondsSinceConnectedUserUpdated > USER_TIMEOUT_IN_S) {
+    if (connectedUserTTL <= 0) {
+      // Skip re-populating the hash field unless the key is expired.
       multi.hset(
         Keys.connectedUser({ project_id, client_id }),
         'user',
@@ -64,18 +117,7 @@ module.exports = {
           first_name: user.first_name || '',
           last_name: user.last_name || '',
           email: user.email || ''
-        }),
-        (err) => {
-          // PERF: In theory we could move this to the EXPIRE calls (here and
-          //        in refreshClient, but this in turn would require logic for
-          //        dealing with command latency (the HASH could expire while
-          //        we send the next EXPIRE command).
-          //       Writing the field every 15min is simpler.
-          if (!err) {
-            // Use timestamp from before the command was sent
-            client.ol_context.connectedUserUpdatedAt = nowInSeconds
-          }
-        }
+        })
       )
     }
 
@@ -88,7 +130,12 @@ module.exports = {
     }
     multi.expire(
       Keys.connectedUser({ project_id, client_id }),
-      USER_TIMEOUT_IN_S
+      USER_TIMEOUT_IN_S,
+      (err) => {
+        if (!err) {
+          updateInternalTTLForConnectedUser()
+        }
+      }
     )
 
     multi.exec(function (err) {
@@ -99,8 +146,11 @@ module.exports = {
     })
   },
 
-  refreshClient(project_id, client_id) {
+  refreshClient(project_id, client) {
+    // NOTE: The publicId is exposed to other clients.
+    const client_id = client.publicId
     logger.log({ project_id, client_id }, 'refreshing connected client')
+    const { updateInternalTTLForConnectedUser } = trackConnectedUserTTL(client)
     rclient.expire(
       Keys.connectedUser({ project_id, client_id }),
       USER_TIMEOUT_IN_S,
@@ -110,6 +160,8 @@ module.exports = {
             { err, project_id, client_id },
             'problem refreshing connected client'
           )
+        } else {
+          updateInternalTTLForConnectedUser()
         }
       }
     )

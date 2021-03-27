@@ -113,7 +113,7 @@ module.exports = WebsocketLoadBalancer = {
           'refreshing client list'
         )
         for (const client of clientList) {
-          ConnectedUsersManager.refreshClient(message.room_id, client.publicId)
+          ConnectedUsersManager.refreshClient(message.room_id, client)
         }
       } else if (message.room_id) {
         if (message._id && Settings.checkEventOrder) {
