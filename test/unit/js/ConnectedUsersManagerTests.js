@@ -68,6 +68,10 @@ describe('ConnectedUsersManager', function () {
       }
     })
     this.client_id = '32132132'
+    this.client = {
+      publicId: this.client_id,
+      ol_context: {}
+    }
     this.project_id = 'dskjh2u21321'
     this.user = {
       _id: 'user-id-123',
@@ -100,7 +104,7 @@ describe('ConnectedUsersManager', function () {
     it('should set a single key with all user details', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
-        this.client_id,
+        this.client,
         this.user,
         null,
         (err) => {
@@ -119,7 +123,7 @@ describe('ConnectedUsersManager', function () {
     it('should push the client_id on to the project list', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
-        this.client_id,
+        this.client,
         this.user,
         null,
         (err) => {
@@ -134,7 +138,7 @@ describe('ConnectedUsersManager', function () {
     it('should add a ttl to the project set so it stays clean', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
-        this.client_id,
+        this.client,
         this.user,
         null,
         (err) => {
@@ -152,7 +156,7 @@ describe('ConnectedUsersManager', function () {
     it('should add a ttl to the connected user so it stays clean', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
-        this.client_id,
+        this.client,
         this.user,
         null,
         (err) => {
@@ -167,10 +171,10 @@ describe('ConnectedUsersManager', function () {
       )
     })
 
-    return it('should set the cursor position when provided', function (done) {
+    it('should set the cursor position when provided', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
-        this.client_id,
+        this.client,
         this.user,
         this.cursorData,
         (err) => {
@@ -184,6 +188,42 @@ describe('ConnectedUsersManager', function () {
           return done()
         }
       )
+    })
+
+    describe('when recently updated', function () {
+      beforeEach(function (done) {
+        this.rClient.expire
+          .withArgs(`clients_in_project:${this.project_id}`)
+          .yields(null)
+        this.ConnectedUsersManager.updateUserPosition(
+          this.project_id,
+          this.client,
+          this.user,
+          null,
+          done
+        )
+      })
+      beforeEach(function () {
+        this.rClient.sadd.reset()
+      })
+
+      it('should not push the client_id on to the project list', function (done) {
+        return this.ConnectedUsersManager.updateUserPosition(
+          this.project_id,
+          this.client,
+          this.user,
+          null,
+          (err) => {
+            this.rClient.sadd
+              .calledWith(
+                `clients_in_project:${this.project_id}`,
+                this.client_id
+              )
+              .should.equal(false)
+            done()
+          }
+        )
+      })
     })
   })
 

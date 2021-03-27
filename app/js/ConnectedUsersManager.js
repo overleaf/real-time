@@ -19,7 +19,9 @@ module.exports = {
   // Use the same method for when a user connects, and when a user sends a cursor
   // update. This way we don't care if the connected_user key has expired when
   // we receive a cursor update.
-  updateUserPosition(project_id, client_id, user, cursorData, callback) {
+  updateUserPosition(project_id, client, user, cursorData, callback) {
+    // NOTE: The publicId is exposed to other clients only.
+    const client_id = client.publicId
     logger.log({ project_id, client_id }, 'marking user as joined or connected')
 
     // It is safe to use a pipeline instead of a multi here:
@@ -29,8 +31,24 @@ module.exports = {
     //     impacting any consistency requirements
     const multi = rclient.pipeline()
 
-    multi.sadd(Keys.clientsInProject({ project_id }), client_id)
-    multi.expire(Keys.clientsInProject({ project_id }), FOUR_DAYS_IN_S)
+    const nowInSeconds = Date.now() / 1000
+    const { clientsInProjectUpdatedAt } = client.ol_context
+    const secondsSinceClientsInProjectUpdated =
+      nowInSeconds - (clientsInProjectUpdatedAt || 0)
+
+    if (secondsSinceClientsInProjectUpdated > ONE_DAY_IN_S) {
+      // Effectively lower expiry to three days without activity of ANY client.
+      multi.sadd(Keys.clientsInProject({ project_id }), client_id)
+      multi.expire(
+        Keys.clientsInProject({ project_id }),
+        FOUR_DAYS_IN_S,
+        (err) => {
+          if (!err) {
+            client.ol_context.clientsInProjectUpdatedAt = nowInSeconds
+          }
+        }
+      )
+    }
 
     multi.hset(
       Keys.connectedUser({ project_id, client_id }),

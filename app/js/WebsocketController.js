@@ -89,7 +89,7 @@ module.exports = WebsocketController = {
       // No need to block for setting the user as connected in the cursor tracking
       ConnectedUsersManager.updateUserPosition(
         project_id,
-        client.publicId,
+        client,
         user,
         null,
         function (err) {
@@ -381,7 +381,7 @@ module.exports = WebsocketController = {
               : first_name || last_name || ''
           ConnectedUsersManager.updateUserPosition(
             project_id,
-            client.publicId,
+            client,
             {
               first_name,
               last_name,

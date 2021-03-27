@@ -164,7 +164,7 @@ describe('WebsocketController', function () {
 
       it('should mark the user as connected in ConnectedUsersManager', function () {
         return this.ConnectedUsersManager.updateUserPosition
-          .calledWith(this.project_id, this.client.publicId, this.user, null)
+          .calledWith(this.project_id, this.client, this.user, null)
           .should.equal(true)
       })
 
@@ -1154,7 +1154,7 @@ describe('WebsocketController', function () {
         this.ConnectedUsersManager.updateUserPosition
           .calledWith(
             this.project_id,
-            this.client.publicId,
+            this.client,
             {
               _id: this.user_id,
               email: this.email,
@@ -1218,7 +1218,7 @@ describe('WebsocketController', function () {
         this.ConnectedUsersManager.updateUserPosition
           .calledWith(
             this.project_id,
-            this.client.publicId,
+            this.client,
             {
               _id: this.user_id,
               email: this.email,
@@ -1282,7 +1282,7 @@ describe('WebsocketController', function () {
         this.ConnectedUsersManager.updateUserPosition
           .calledWith(
             this.project_id,
-            this.client.publicId,
+            this.client,
             {
               _id: this.user_id,
               email: this.email,
