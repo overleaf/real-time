@@ -48,6 +48,9 @@ describe('ConnectedUsersManager', function () {
       hset: sinon.stub(),
       hgetall: sinon.stub(),
       exec: sinon.stub(),
+      pipeline: () => {
+        return this.rClient
+      },
       multi: () => {
         return this.rClient
       }

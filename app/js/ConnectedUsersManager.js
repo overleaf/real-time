@@ -22,7 +22,12 @@ module.exports = {
   updateUserPosition(project_id, client_id, user, cursorData, callback) {
     logger.log({ project_id, client_id }, 'marking user as joined or connected')
 
-    const multi = rclient.multi()
+    // It is safe to use a pipeline instead of a multi here:
+    //  - others commands can change the clientsInProject hash without
+    //     impacting our operation
+    //  - other commands can update the connectedUser fields/expiry without
+    //     impacting any consistency requirements
+    const multi = rclient.pipeline()
 
     multi.sadd(Keys.clientsInProject({ project_id }), client_id)
     multi.expire(Keys.clientsInProject({ project_id }), FOUR_DAYS_IN_S)
@@ -76,7 +81,12 @@ module.exports = {
 
   markUserAsDisconnected(project_id, client_id, callback) {
     logger.log({ project_id, client_id }, 'marking user as disconnected')
-    const multi = rclient.multi()
+    // It is safe to use a pipeline instead of a multi here:
+    //  - others commands can change the clientsInProject hash without
+    //     impacting our operation
+    //  - deleting the connectedUser entry can happen independent to the
+    //     operations on clientsInProject
+    const multi = rclient.pipeline()
     multi.srem(Keys.clientsInProject({ project_id }), client_id)
     multi.expire(Keys.clientsInProject({ project_id }), FOUR_DAYS_IN_S)
     multi.del(Keys.connectedUser({ project_id, client_id }))
