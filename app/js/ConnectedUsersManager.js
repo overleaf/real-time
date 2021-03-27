@@ -42,6 +42,7 @@ function getEffectiveTTLInS(expiresAt) {
   return ttl
 }
 
+const KEEP_TTL_ABOVE = 0.9
 function trackKeyExpiry(client, field, ttlInSeconds) {
   const nowBeforeSendingInSeconds = Date.now() / 1000
 
@@ -50,7 +51,8 @@ function trackKeyExpiry(client, field, ttlInSeconds) {
     client.ol_context[field] = nowBeforeSendingInSeconds + ttlInSeconds
   }
   const ttl = getEffectiveTTLInS(client.ol_context[field])
-  return { ttl, updateInternalTTL }
+  const ttlRecentlyBumped = ttl > ttlInSeconds * KEEP_TTL_ABOVE
+  return { ttl, ttlRecentlyBumped, updateInternalTTL }
 }
 
 function trackClientsInProjectTTL(client) {
@@ -63,9 +65,14 @@ function trackClientsInProjectTTL(client) {
 function trackConnectedUserTTL(client) {
   const {
     ttl: connectedUserTTL,
+    ttlRecentlyBumped: connectedUserTTLRecentlyBumped,
     updateInternalTTL: updateInternalTTLForConnectedUser
   } = trackKeyExpiry(client, 'connectedUserExpiry', USER_TIMEOUT_IN_S)
-  return { connectedUserTTL, updateInternalTTLForConnectedUser }
+  return {
+    connectedUserTTL,
+    connectedUserTTLRecentlyBumped,
+    updateInternalTTLForConnectedUser
+  }
 }
 
 module.exports = {
@@ -90,6 +97,7 @@ module.exports = {
     } = trackClientsInProjectTTL(client)
     const {
       connectedUserTTL,
+      connectedUserTTLRecentlyBumped,
       updateInternalTTLForConnectedUser
     } = trackConnectedUserTTL(client)
 
@@ -128,15 +136,17 @@ module.exports = {
         JSON.stringify(cursorData)
       )
     }
-    multi.expire(
-      Keys.connectedUser({ project_id, client_id }),
-      USER_TIMEOUT_IN_S,
-      (err) => {
-        if (!err) {
-          updateInternalTTLForConnectedUser()
+    if (!connectedUserTTLRecentlyBumped) {
+      multi.expire(
+        Keys.connectedUser({ project_id, client_id }),
+        USER_TIMEOUT_IN_S,
+        (err) => {
+          if (!err) {
+            updateInternalTTLForConnectedUser()
+          }
         }
-      }
-    )
+      )
+    }
 
     multi.exec(function (err) {
       if (err) {
@@ -150,7 +160,11 @@ module.exports = {
     // NOTE: The publicId is exposed to other clients.
     const client_id = client.publicId
     logger.log({ project_id, client_id }, 'refreshing connected client')
-    const { updateInternalTTLForConnectedUser } = trackConnectedUserTTL(client)
+    const {
+      connectedUserTTLRecentlyBumped,
+      updateInternalTTLForConnectedUser
+    } = trackConnectedUserTTL(client)
+    if (connectedUserTTLRecentlyBumped) return
     rclient.expire(
       Keys.connectedUser({ project_id, client_id }),
       USER_TIMEOUT_IN_S,
