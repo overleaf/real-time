@@ -88,25 +88,6 @@ describe('ConnectedUsersManager', function () {
       return this.rClient.exec.callsArgWith(0)
     })
 
-    it('should set a key with the date and give it a ttl', function (done) {
-      return this.ConnectedUsersManager.updateUserPosition(
-        this.project_id,
-        this.client_id,
-        this.user,
-        null,
-        (err) => {
-          this.rClient.hset
-            .calledWith(
-              `connected_user:${this.project_id}:${this.client_id}`,
-              'last_updated_at',
-              Date.now()
-            )
-            .should.equal(true)
-          return done()
-        }
-      )
-    })
-
     it('should set a key with the user_id', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
@@ -308,7 +289,6 @@ describe('ConnectedUsersManager', function () {
       this.rClient.hgetall.callsArgWith(1, null, {
         connected_at: new Date(),
         user_id: this.user._id,
-        last_updated_at: `${Date.now()}`,
         cursorData
       })
       return this.ConnectedUsersManager._getConnectedUser(
@@ -358,45 +338,43 @@ describe('ConnectedUsersManager', function () {
         .withArgs(this.project_id, this.users[0])
         .callsArgWith(2, null, {
           connected: true,
-          client_age: 2,
           client_id: this.users[0]
         })
       this.ConnectedUsersManager._getConnectedUser
         .withArgs(this.project_id, this.users[1])
         .callsArgWith(2, null, {
           connected: false,
-          client_age: 1,
           client_id: this.users[1]
         })
       this.ConnectedUsersManager._getConnectedUser
         .withArgs(this.project_id, this.users[2])
         .callsArgWith(2, null, {
           connected: true,
-          client_age: 3,
           client_id: this.users[2]
         })
       return this.ConnectedUsersManager._getConnectedUser
         .withArgs(this.project_id, this.users[3])
         .callsArgWith(2, null, {
           connected: true,
-          client_age: 11,
           client_id: this.users[3]
         })
-    }) // connected but old
+    })
 
-    return it('should only return the users in the list which are still in redis and recently updated', function (done) {
+    it('should return all the users which are still in redis', function (done) {
       return this.ConnectedUsersManager.getConnectedUsers(
         this.project_id,
         (err, users) => {
-          users.length.should.equal(2)
+          users.length.should.equal(3)
           users[0].should.deep.equal({
             client_id: this.users[0],
-            client_age: 2,
             connected: true
           })
           users[1].should.deep.equal({
             client_id: this.users[2],
-            client_age: 3,
+            connected: true
+          })
+          users[2].should.deep.equal({
+            client_id: this.users[3],
             connected: true
           })
           return done()

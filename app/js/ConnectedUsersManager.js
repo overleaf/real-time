@@ -14,7 +14,6 @@ const ONE_DAY_IN_S = ONE_HOUR_IN_S * 24
 const FOUR_DAYS_IN_S = ONE_DAY_IN_S * 4
 
 const USER_TIMEOUT_IN_S = ONE_HOUR_IN_S / 4
-const REFRESH_TIMEOUT_IN_S = 10 // only show clients which have responded to a refresh request in the last 10 seconds
 
 module.exports = {
   // Use the same method for when a user connects, and when a user sends a cursor
@@ -28,11 +27,6 @@ module.exports = {
     multi.sadd(Keys.clientsInProject({ project_id }), client_id)
     multi.expire(Keys.clientsInProject({ project_id }), FOUR_DAYS_IN_S)
 
-    multi.hset(
-      Keys.connectedUser({ project_id, client_id }),
-      'last_updated_at',
-      Date.now()
-    )
     multi.hset(
       Keys.connectedUser({ project_id, client_id }),
       'user_id',
@@ -76,24 +70,18 @@ module.exports = {
 
   refreshClient(project_id, client_id) {
     logger.log({ project_id, client_id }, 'refreshing connected client')
-    const multi = rclient.multi()
-    multi.hset(
+    rclient.expire(
       Keys.connectedUser({ project_id, client_id }),
-      'last_updated_at',
-      Date.now()
-    )
-    multi.expire(
-      Keys.connectedUser({ project_id, client_id }),
-      USER_TIMEOUT_IN_S
-    )
-    multi.exec(function (err) {
-      if (err) {
-        logger.err(
-          { err, project_id, client_id },
-          'problem refreshing connected client'
-        )
+      USER_TIMEOUT_IN_S,
+      function (err) {
+        if (err) {
+          logger.err(
+            { err, project_id, client_id },
+            'problem refreshing connected client'
+          )
+        }
       }
-    })
+    )
   },
 
   markUserAsDisconnected(project_id, client_id, callback) {
@@ -129,8 +117,6 @@ module.exports = {
       } else {
         result.connected = true
         result.client_id = client_id
-        result.client_age =
-          (Date.now() - parseInt(result.last_updated_at, 10)) / 1000
         if (result.cursorData) {
           try {
             result.cursorData = JSON.parse(result.cursorData)
@@ -165,10 +151,7 @@ module.exports = {
           OError.tag(err, 'problem getting connected users')
           return callback(err)
         }
-        users = users.filter(
-          (user) =>
-            user && user.connected && user.client_age < REFRESH_TIMEOUT_IN_S
-        )
+        users = users.filter((user) => user && user.connected)
         callback(null, users)
       })
     })
