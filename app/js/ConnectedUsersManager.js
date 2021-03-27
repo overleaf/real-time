@@ -32,9 +32,14 @@ module.exports = {
     const multi = rclient.pipeline()
 
     const nowInSeconds = Date.now() / 1000
-    const { clientsInProjectUpdatedAt } = client.ol_context
+    const {
+      clientsInProjectUpdatedAt,
+      connectedUserUpdatedAt
+    } = client.ol_context
     const secondsSinceClientsInProjectUpdated =
       nowInSeconds - (clientsInProjectUpdatedAt || 0)
+    const secondsSinceConnectedUserUpdated =
+      nowInSeconds - (connectedUserUpdatedAt || 0)
 
     if (secondsSinceClientsInProjectUpdated > ONE_DAY_IN_S) {
       // Effectively lower expiry to three days without activity of ANY client.
@@ -50,16 +55,29 @@ module.exports = {
       )
     }
 
-    multi.hset(
-      Keys.connectedUser({ project_id, client_id }),
-      'user',
-      JSON.stringify({
-        user_id: user._id,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || ''
-      })
-    )
+    if (secondsSinceConnectedUserUpdated > USER_TIMEOUT_IN_S) {
+      multi.hset(
+        Keys.connectedUser({ project_id, client_id }),
+        'user',
+        JSON.stringify({
+          user_id: user._id,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || ''
+        }),
+        (err) => {
+          // PERF: In theory we could move this to the EXPIRE calls (here and
+          //        in refreshClient, but this in turn would require logic for
+          //        dealing with command latency (the HASH could expire while
+          //        we send the next EXPIRE command).
+          //       Writing the field every 15min is simpler.
+          if (!err) {
+            // Use timestamp from before the command was sent
+            client.ol_context.connectedUserUpdatedAt = nowInSeconds
+          }
+        }
+      )
+    }
 
     if (cursorData) {
       multi.hset(

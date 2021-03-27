@@ -195,6 +195,12 @@ describe('ConnectedUsersManager', function () {
         this.rClient.expire
           .withArgs(`clients_in_project:${this.project_id}`)
           .yields(null)
+        this.rClient.hset
+          .withArgs(
+            `connected_user:${this.project_id}:${this.client_id}`,
+            'user'
+          )
+          .yields(null)
         this.ConnectedUsersManager.updateUserPosition(
           this.project_id,
           this.client,
@@ -205,6 +211,7 @@ describe('ConnectedUsersManager', function () {
       })
       beforeEach(function () {
         this.rClient.sadd.reset()
+        this.rClient.hset.reset()
       })
 
       it('should not push the client_id on to the project list', function (done) {
@@ -218,6 +225,25 @@ describe('ConnectedUsersManager', function () {
               .calledWith(
                 `clients_in_project:${this.project_id}`,
                 this.client_id
+              )
+              .should.equal(false)
+            done()
+          }
+        )
+      })
+
+      it('should not update user details', function (done) {
+        this.ConnectedUsersManager.updateUserPosition(
+          this.project_id,
+          this.client,
+          this.user,
+          null,
+          (err) => {
+            this.rClient.hset
+              .calledWith(
+                `connected_user:${this.project_id}:${this.client_id}`,
+                'user',
+                this.userSerialized
               )
               .should.equal(false)
             done()
