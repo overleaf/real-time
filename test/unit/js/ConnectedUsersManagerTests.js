@@ -72,6 +72,12 @@ describe('ConnectedUsersManager', function () {
       last_name: 'Bloggs',
       email: 'joe@example.com'
     }
+    this.userSerialized = JSON.stringify({
+      user_id: this.user._id,
+      first_name: this.user.first_name,
+      last_name: this.user.last_name,
+      email: this.user.email
+    })
     return (this.cursorData = {
       row: 12,
       column: 9,
@@ -88,7 +94,7 @@ describe('ConnectedUsersManager', function () {
       return this.rClient.exec.callsArgWith(0)
     })
 
-    it('should set a key with the user_id', function (done) {
+    it('should set a single key with all user details', function (done) {
       return this.ConnectedUsersManager.updateUserPosition(
         this.project_id,
         this.client_id,
@@ -98,65 +104,8 @@ describe('ConnectedUsersManager', function () {
           this.rClient.hset
             .calledWith(
               `connected_user:${this.project_id}:${this.client_id}`,
-              'user_id',
-              this.user._id
-            )
-            .should.equal(true)
-          return done()
-        }
-      )
-    })
-
-    it('should set a key with the first_name', function (done) {
-      return this.ConnectedUsersManager.updateUserPosition(
-        this.project_id,
-        this.client_id,
-        this.user,
-        null,
-        (err) => {
-          this.rClient.hset
-            .calledWith(
-              `connected_user:${this.project_id}:${this.client_id}`,
-              'first_name',
-              this.user.first_name
-            )
-            .should.equal(true)
-          return done()
-        }
-      )
-    })
-
-    it('should set a key with the last_name', function (done) {
-      return this.ConnectedUsersManager.updateUserPosition(
-        this.project_id,
-        this.client_id,
-        this.user,
-        null,
-        (err) => {
-          this.rClient.hset
-            .calledWith(
-              `connected_user:${this.project_id}:${this.client_id}`,
-              'last_name',
-              this.user.last_name
-            )
-            .should.equal(true)
-          return done()
-        }
-      )
-    })
-
-    it('should set a key with the email', function (done) {
-      return this.ConnectedUsersManager.updateUserPosition(
-        this.project_id,
-        this.client_id,
-        this.user,
-        null,
-        (err) => {
-          this.rClient.hset
-            .calledWith(
-              `connected_user:${this.project_id}:${this.client_id}`,
-              'email',
-              this.user.email
+              'user',
+              this.userSerialized
             )
             .should.equal(true)
           return done()
@@ -288,7 +237,7 @@ describe('ConnectedUsersManager', function () {
       const cursorData = JSON.stringify({ cursorData: { row: 1 } })
       this.rClient.hgetall.callsArgWith(1, null, {
         connected_at: new Date(),
-        user_id: this.user._id,
+        user: this.userSerialized,
         cursorData
       })
       return this.ConnectedUsersManager._getConnectedUser(
@@ -297,6 +246,10 @@ describe('ConnectedUsersManager', function () {
         (err, result) => {
           result.connected.should.equal(true)
           result.client_id.should.equal(this.client_id)
+          result.user_id.should.equal(this.user._id)
+          result.first_name.should.equal(this.user.first_name)
+          result.last_name.should.equal(this.user.last_name)
+          result.email.should.equal(this.user.email)
           return done()
         }
       )

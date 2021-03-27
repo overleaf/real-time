@@ -29,23 +29,13 @@ module.exports = {
 
     multi.hset(
       Keys.connectedUser({ project_id, client_id }),
-      'user_id',
-      user._id
-    )
-    multi.hset(
-      Keys.connectedUser({ project_id, client_id }),
-      'first_name',
-      user.first_name || ''
-    )
-    multi.hset(
-      Keys.connectedUser({ project_id, client_id }),
-      'last_name',
-      user.last_name || ''
-    )
-    multi.hset(
-      Keys.connectedUser({ project_id, client_id }),
-      'email',
-      user.email || ''
+      'user',
+      JSON.stringify({
+        user_id: user._id,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || ''
+      })
     )
 
     if (cursorData) {
@@ -109,7 +99,7 @@ module.exports = {
         }).withCause(err)
         return callback(err)
       }
-      if (!(result && result.user_id)) {
+      if (!(result && result.user)) {
         result = {
           connected: false,
           client_id
@@ -117,6 +107,19 @@ module.exports = {
       } else {
         result.connected = true
         result.client_id = client_id
+
+        // inflate user object
+        try {
+          Object.assign(result, JSON.parse(result.user))
+        } catch (e) {
+          OError.tag(e, 'error parsing user JSON', {
+            other_client_id: client_id,
+            user: result.user
+          })
+          return callback(e)
+        }
+        delete result.user
+
         if (result.cursorData) {
           try {
             result.cursorData = JSON.parse(result.cursorData)
