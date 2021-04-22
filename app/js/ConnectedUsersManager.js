@@ -211,7 +211,9 @@ module.exports = {
         }).withCause(err)
         return callback(err)
       }
-      if (!(result && result.user)) {
+      // old format: .user_id, new format: .user
+      const hasData = result && (result.user_id || result.user)
+      if (!hasData) {
         result = {
           connected: false,
           client_id
@@ -220,17 +222,19 @@ module.exports = {
         result.connected = true
         result.client_id = client_id
 
-        // inflate user object
-        try {
-          Object.assign(result, JSON.parse(result.user))
-        } catch (e) {
-          OError.tag(e, 'error parsing user JSON', {
-            other_client_id: client_id,
-            user: result.user
-          })
-          return callback(e)
+        if (result.user) {
+          // inflate the merged user object
+          try {
+            Object.assign(result, JSON.parse(result.user))
+          } catch (e) {
+            OError.tag(e, 'error parsing user JSON', {
+              other_client_id: client_id,
+              user: result.user
+            })
+            return callback(e)
+          }
+          delete result.user
         }
-        delete result.user
 
         if (result.cursorData) {
           try {
